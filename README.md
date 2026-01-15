@@ -5,7 +5,7 @@
 
 <div align="center">
   
-![License](https://img.shields.io/badge/License-MIT-yellow)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT)
 ![AutoML](https://img.shields.io/badge/AutoML-End--to--End-blueviolet)
 ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)
 ![Interpretability](https://img.shields.io/badge/Model-Interpretable-success)
