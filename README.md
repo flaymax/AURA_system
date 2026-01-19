@@ -24,7 +24,7 @@ Pipeline stages include:
 - WoE-based feature engineering with built-in monotonicity and stability validation
 - Statistical feature selection, including stepwise procedures, p-value analysis, and significance testing
 - Correlation-aware feature clustering to eliminate redundancy and improve model robustness
-- Model training and evaluation with explainability and performance diagnostics
+- Model training and evaluation with explainability 
 
 Roadmap
 - 
