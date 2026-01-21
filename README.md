@@ -27,5 +27,6 @@ Pipeline stages include:
 - Model training and evaluation with explainability 
 
 Roadmap
-- 
+- roadmap for building
+- intellectual rights 
 
