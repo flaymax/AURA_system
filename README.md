@@ -18,6 +18,8 @@
 
 An automated AutoML system that turns raw features into stable, interpretable, and production-ready models using WoE-based feature engineering, statistical selection, and fully monitored pipelines.
 
+
+## Core Code
 Pipeline stages include:
 
 - Automated feature preprocessing with data quality checks and transformations
