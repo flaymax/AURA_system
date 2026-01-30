@@ -30,18 +30,20 @@ Roadmap for core code  (New Components)
 
 | Done | Stage | Status | Notes |
 |------|-------|--------|-------|
-| ⬜ | `PipelineStage` base class | NEW | Abstract base with fit/transform contract |
-| ⬜ | `ScorecardPipeline` orchestrator | NEW | Chains stages, manages state |
-| ⬜ | `DataCleaner` | NEW | Basic cleaning logic |
-| ⬜ | `TypeDetector` | WRAP | Wraps my `detect_feature_type` |
-| ⬜ | `MissingValueHandler` | NEW | Imputation strategies |
+| [x] | `PipelineStage` base class | NEW | Abstract base with fit/transform contract |
+| [x] | `ScorecardPipeline` orchestrator | NEW | Chains stages, manages state |
+| [x] | `DataCleaner` | NEW | Basic cleaning logic |
+| [x] | `TypeDetector` | WRAP | Wraps my `detect_feature_type` |
+|  ⬜ | `MissingValueHandler` | NEW | Imputation strategies |
 | ⬜ | `WoEBinnerStage` | WRAP | Adapter for my `Binner` |
 | ⬜ | `PostProcessor` | NEW | Validation after binning |
-| ⬜ | `ClusteringStage` | WRAP | Adapter for my `ClusterAnalysis` |
-| ⬜ | `StepwiseSelectionStage` | WRAP | Adapter for `iterative_logistic_selection` |
+| [x] | `ClusteringStage` | WRAP | Adapter for my `ClusterAnalysis` |
+| [x] | `StepwiseSelectionStage` | WRAP | Adapter for `iterative_logistic_selection` |
 | ⬜ | `FinalFilterStage` | NEW | p-value + VIF filtering |
-| ⬜ | `ModelTrainer` | NEW | Final LR training with diagnostics |
-| ⬜ | `StabilityAnalyzer` | WRAP | Wraps my PSI code |
+|[x] | `ModelTrainer` | NEW | Final LR training with diagnostics |
+| [x] | `StabilityAnalyzer` | WRAP | Wraps my PSI code |
 | ⬜ | `ReportGenerator` | NEW | Dashboard generation |
+
+
 
 
