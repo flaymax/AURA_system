@@ -26,7 +26,22 @@ Pipeline stages include:
 - Correlation-aware feature clustering to eliminate redundancy and improve model robustness
 - Model training and evaluation with explainability 
 
-Roadmap
-- roadmap for building
-- intellectual rights 
+Roadmap for core code  (New Components)
+
+| Done | Stage | Status | Notes |
+|------|-------|--------|-------|
+| ⬜ | `PipelineStage` base class | NEW | Abstract base with fit/transform contract |
+| ⬜ | `ScorecardPipeline` orchestrator | NEW | Chains stages, manages state |
+| ⬜ | `DataCleaner` | NEW | Basic cleaning logic |
+| ⬜ | `TypeDetector` | WRAP | Wraps my `detect_feature_type` |
+| ⬜ | `MissingValueHandler` | NEW | Imputation strategies |
+| ⬜ | `WoEBinnerStage` | WRAP | Adapter for my `Binner` |
+| ⬜ | `PostProcessor` | NEW | Validation after binning |
+| ⬜ | `ClusteringStage` | WRAP | Adapter for my `ClusterAnalysis` |
+| ⬜ | `StepwiseSelectionStage` | WRAP | Adapter for `iterative_logistic_selection` |
+| ⬜ | `FinalFilterStage` | NEW | p-value + VIF filtering |
+| ⬜ | `ModelTrainer` | NEW | Final LR training with diagnostics |
+| ⬜ | `StabilityAnalyzer` | WRAP | Wraps my PSI code |
+| ⬜ | `ReportGenerator` | NEW | Dashboard generation |
+
 
