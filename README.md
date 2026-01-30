@@ -48,4 +48,10 @@ Roadmap for core code  (New Components)
 
 
 
+## License
 
+MIT License
+
+Copyright (c) 2026 Aleksandr Bykov
+
+See the [LICENSE](LICENSE) file for details.
