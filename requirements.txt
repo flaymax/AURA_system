@@ -1,5 +1,5 @@
 # =============================================================================
-# AURA System - Credit Scoring Pipeline Requirements
+# AURA System - Reasoning Modelling Pipeline Requirements
 # =============================================================================
 
 # Core data processing
