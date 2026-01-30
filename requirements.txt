@@ -1,13 +1,39 @@
-envs==1.4
-numpy==1.23.2
-statsmodels>=0.13
-pandas==1.4.4
-scipy>=1.9
-python-dateutil==2.8.2
-pytz==2022.2.1
-six==1.16.0
-valley==1.5.8
-sklearn==0.0
+# =============================================================================
+# AURA System - Credit Scoring Pipeline Requirements
+# =============================================================================
 
-# boosting
-xgboost>=1.7
+# Core data processing
+numpy>=1.23.0
+pandas>=1.4.0
+
+# Statistical analysis
+scipy>=1.9.0
+statsmodels>=0.13.0
+
+# Machine learning
+scikit-learn>=1.1.0
+
+# Visualization - Matplotlib (static plots)
+matplotlib>=3.5.0
+
+# Visualization - Plotly (interactive plots)
+plotly>=5.10.0
+
+# Optional: for Plotly image export (kaleido is needed for .png/.pdf export)
+# kaleido>=0.2.1
+
+# =============================================================================
+# Development dependencies (optional)
+# =============================================================================
+# pytest>=7.0.0
+# pytest-cov>=3.0.0
+# black>=22.0.0
+# flake8>=4.0.0
+# mypy>=0.950
+
+# =============================================================================
+# Optional: Boosting libraries (if needed for alternative models)
+# =============================================================================
+# xgboost>=1.7.0
+# lightgbm>=3.3.0
+# catboost>=1.1.0
