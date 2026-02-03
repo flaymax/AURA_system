@@ -36,9 +36,9 @@ Roadmap for core code  (New Components)
 | [x] | `ScorecardPipeline` orchestrator | NEW | Chains stages, manages state |
 | [x] | `DataCleaner` | NEW | Basic cleaning logic |
 | [x] | `TypeDetector` | WRAP | Wraps my `detect_feature_type` |
-|  ⬜ | `MissingValueHandler` | NEW | Imputation strategies |
-| ⬜ | `WoEBinnerStage` | WRAP | Adapter for my `Binner` |
-| ⬜ | `PostProcessor` | NEW | Validation after binning |
+| [x] | `MissingValueHandler` | NEW | Imputation strategies |
+| [x] | `WoEBinnerStage` | WRAP | Adapter for my `Binner` |
+| [x] | `PostProcessor` | NEW | Validation after binning |
 | [x] | `ClusteringStage` | WRAP | Adapter for my `ClusterAnalysis` |
 | [x] | `StepwiseSelectionStage` | WRAP | Adapter for `iterative_logistic_selection` |
 | ⬜ | `FinalFilterStage` | NEW | p-value + VIF filtering |
