@@ -9,8 +9,6 @@ This stage analyzes features and classifies them into types:
 
 The stage wraps and extends the detect_feature_type function from
 src/utils_feature_types.py with more granular classification.
-
-Author: AURA Team
 """
 
 import logging

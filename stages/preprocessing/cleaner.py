@@ -11,8 +11,6 @@ and pipeline execution stops with detailed error info.
 
 All dropped features are logged with comprehensive details for
 later visualization and debugging.
-
-Author: AURA Team
 """
 
 import logging
@@ -216,7 +214,7 @@ class DataCleaner(PipelineStage):
     """Data cleaning stage that removes unusable features.
 
     This is typically the first stage in the pipeline. It identifies
-    and removes features that cant be used for modeling:
+    and removes features that cannot be used for modeling:
 
     1. High-null features: columns where most values are missing
     2. Low-variance features: columns where almost all values are the same
@@ -420,7 +418,7 @@ class DataCleaner(PipelineStage):
                         mean_val = float(numeric_data.mean())
                         std_val = float(numeric_data.std()) if len(numeric_data) > 1 else 0.0
                 except (ValueError, TypeError):
-                    # Cant compute numeric stats, leave as None
+                    # Cannot compute numeric stats, leave as None
                     pass
 
             # Store in legacy dicts for backward compatibility
@@ -810,7 +808,7 @@ class DataCleaner(PipelineStage):
                     "drop_reason": details.drop_reason,
                 })
             else:
-                # Fallback for features without details (shouldnt happen)
+                # Fallback for features without details (should not happen)
                 records.append({
                     "feature": feat,
                     "dtype": self._feature_dtypes.get(feat, "unknown"),

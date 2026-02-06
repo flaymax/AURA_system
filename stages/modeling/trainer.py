@@ -2,20 +2,23 @@
 Model training stage for logistic regression scorecard.
 
 Trains the final logistic regression model and converts it to
-a scorecard format with points-based scoring.
+a scorecard format with points-based scoring. Includes bootstrap
+confidence intervals for performance metrics.
 """
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 import time
+import warnings
 
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.utils import resample
 
-from core.base import PipelineStage, StageResult, ModelConfig
+from core.base import PipelineStage, StageResult, ModelConfig, BootstrapConfig
 
 
 @dataclass
@@ -27,6 +30,55 @@ class FeatureCoefficient:
     std_error: Optional[float] = None
     z_score: Optional[float] = None
     pvalue: Optional[float] = None
+
+
+@dataclass
+class ConfidenceInterval:
+    """Confidence interval for a metric.
+
+    Stores the point estimate and bootstrap confidence bounds.
+    """
+    metric_name: str
+    point_estimate: float
+    lower_bound: float
+    upper_bound: float
+    confidence_level: float
+    std_error: float  # bootstrap standard error
+    n_iterations: int
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "metric": self.metric_name,
+            "point_estimate": round(self.point_estimate, 4),
+            "lower_bound": round(self.lower_bound, 4),
+            "upper_bound": round(self.upper_bound, 4),
+            "confidence_level": self.confidence_level,
+            "std_error": round(self.std_error, 4),
+            "n_iterations": self.n_iterations,
+        }
+
+
+@dataclass
+class BootstrapResults:
+    """Results from bootstrap resampling.
+
+    Contains confidence intervals for all requested metrics
+    on both train and test sets.
+    """
+    train_ci: Dict[str, ConfidenceInterval] = field(default_factory=dict)
+    test_ci: Dict[str, ConfidenceInterval] = field(default_factory=dict)
+    n_iterations: int = 0
+    confidence_level: float = 0.95
+    elapsed_seconds: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "train": {k: v.to_dict() for k, v in self.train_ci.items()},
+            "test": {k: v.to_dict() for k, v in self.test_ci.items()},
+            "n_iterations": self.n_iterations,
+            "confidence_level": self.confidence_level,
+            "elapsed_seconds": round(self.elapsed_seconds, 3),
+        }
 
 
 @dataclass
@@ -57,6 +109,8 @@ class ModelInfo:
     base_score: float = 600.0
     pdo: float = 20.0  # points to double odds
     base_odds: float = 50.0  # odds at base score
+    # bootstrap confidence intervals
+    bootstrap_results: Optional[BootstrapResults] = None
     # timing
     elapsed_seconds: float = 0.0
 
@@ -88,13 +142,19 @@ class ModelTrainerStage(PipelineStage):
     where Factor = PDO / ln(2)
     """
 
-    def __init__(self, config: Optional[ModelConfig] = None):
+    def __init__(
+        self,
+        config: Optional[ModelConfig] = None,
+        bootstrap_config: Optional[BootstrapConfig] = None
+    ):
         """
         Initialize ModelTrainerStage.
 
         Args:
             config: ModelConfig with scorecard parameters.
                    If None, uses defaults (base_score=600, pdo=20)
+            bootstrap_config: BootstrapConfig for confidence intervals.
+                   If None, uses defaults (enabled=True, n_iterations=1000)
         """
         super().__init__(config or ModelConfig())
         self._model: Optional[LogisticRegression] = None
@@ -103,6 +163,7 @@ class ModelTrainerStage(PipelineStage):
         self._scorecard_info: Optional[ScorecardInfo] = None
         self._feature_names: List[str] = []
         self._is_fitted = False
+        self._bootstrap_config = bootstrap_config or BootstrapConfig()
 
     def _calculate_ks(self, y_true: np.ndarray, y_prob: np.ndarray) -> float:
         """
@@ -158,6 +219,158 @@ class ModelTrainerStage(PipelineStage):
             return se[1:]  # skip intercept
         except np.linalg.LinAlgError:
             return np.full(X.shape[1], np.inf)
+
+    def _calculate_bootstrap_ci(
+        self,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_test: np.ndarray,
+        y_test: np.ndarray,
+        model: LogisticRegression,
+        scaler: StandardScaler,
+    ) -> BootstrapResults:
+        """
+        Calculate bootstrap confidence intervals for model metrics.
+
+        Uses stratified resampling to preserve class balance in each
+        bootstrap sample. Calculates CIs for AUC, Gini, and KS.
+
+        Args:
+            X_train: Training feature matrix (unscaled)
+            y_train: Training target vector
+            X_test: Test feature matrix (unscaled)
+            y_test: Test target vector
+            model: Fitted logistic regression model
+            scaler: Fitted StandardScaler
+
+        Returns:
+            BootstrapResults with confidence intervals
+        """
+        bootstrap_start = time.time()
+        config = self._bootstrap_config
+
+        # Storage for bootstrap samples
+        train_metrics = {m: [] for m in config.metrics}
+        test_metrics = {m: [] for m in config.metrics}
+
+        rng = np.random.RandomState(config.random_state)
+
+        for i in range(config.n_iterations):
+            # Stratified resampling of training data
+            if config.stratified:
+                # Resample within each class
+                idx_0 = np.where(y_train == 0)[0]
+                idx_1 = np.where(y_train == 1)[0]
+
+                boot_idx_0 = rng.choice(idx_0, size=len(idx_0), replace=True)
+                boot_idx_1 = rng.choice(idx_1, size=len(idx_1), replace=True)
+                boot_idx = np.concatenate([boot_idx_0, boot_idx_1])
+            else:
+                boot_idx = rng.choice(len(y_train), size=len(y_train), replace=True)
+
+            X_boot = X_train[boot_idx]
+            y_boot = y_train[boot_idx]
+
+            # Fit model on bootstrap sample
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    boot_scaler = StandardScaler()
+                    X_boot_scaled = boot_scaler.fit_transform(X_boot)
+
+                    boot_model = LogisticRegression(
+                        penalty=None,
+                        solver='lbfgs',
+                        max_iter=1000,
+                        random_state=config.random_state
+                    )
+                    boot_model.fit(X_boot_scaled, y_boot)
+
+                    # Predict on original train and test
+                    X_train_scaled = boot_scaler.transform(X_train)
+                    X_test_scaled = boot_scaler.transform(X_test)
+
+                    p_train = boot_model.predict_proba(X_train_scaled)[:, 1]
+                    p_test = boot_model.predict_proba(X_test_scaled)[:, 1]
+
+                    # Calculate metrics
+                    if "auc" in config.metrics:
+                        train_metrics["auc"].append(roc_auc_score(y_train, p_train))
+                        test_metrics["auc"].append(roc_auc_score(y_test, p_test))
+
+                    if "gini" in config.metrics:
+                        train_auc = roc_auc_score(y_train, p_train)
+                        test_auc = roc_auc_score(y_test, p_test)
+                        train_metrics["gini"].append(2 * train_auc - 1)
+                        test_metrics["gini"].append(2 * test_auc - 1)
+
+                    if "ks" in config.metrics:
+                        train_metrics["ks"].append(self._calculate_ks(y_train, p_train))
+                        test_metrics["ks"].append(self._calculate_ks(y_test, p_test))
+
+            except Exception:
+                # Skip failed iterations
+                continue
+
+        # Calculate confidence intervals
+        alpha = 1 - config.confidence_level
+        lower_pct = (alpha / 2) * 100
+        upper_pct = (1 - alpha / 2) * 100
+
+        # Get point estimates from original model
+        X_train_scaled = scaler.transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+        p_train_orig = model.predict_proba(X_train_scaled)[:, 1]
+        p_test_orig = model.predict_proba(X_test_scaled)[:, 1]
+
+        point_estimates = {
+            "train": {
+                "auc": roc_auc_score(y_train, p_train_orig),
+                "gini": 2 * roc_auc_score(y_train, p_train_orig) - 1,
+                "ks": self._calculate_ks(y_train, p_train_orig),
+            },
+            "test": {
+                "auc": roc_auc_score(y_test, p_test_orig),
+                "gini": 2 * roc_auc_score(y_test, p_test_orig) - 1,
+                "ks": self._calculate_ks(y_test, p_test_orig),
+            }
+        }
+
+        train_ci = {}
+        test_ci = {}
+
+        for metric in config.metrics:
+            if train_metrics[metric]:
+                train_ci[metric] = ConfidenceInterval(
+                    metric_name=metric,
+                    point_estimate=point_estimates["train"][metric],
+                    lower_bound=np.percentile(train_metrics[metric], lower_pct),
+                    upper_bound=np.percentile(train_metrics[metric], upper_pct),
+                    confidence_level=config.confidence_level,
+                    std_error=np.std(train_metrics[metric]),
+                    n_iterations=len(train_metrics[metric]),
+                )
+
+            if test_metrics[metric]:
+                test_ci[metric] = ConfidenceInterval(
+                    metric_name=metric,
+                    point_estimate=point_estimates["test"][metric],
+                    lower_bound=np.percentile(test_metrics[metric], lower_pct),
+                    upper_bound=np.percentile(test_metrics[metric], upper_pct),
+                    confidence_level=config.confidence_level,
+                    std_error=np.std(test_metrics[metric]),
+                    n_iterations=len(test_metrics[metric]),
+                )
+
+        bootstrap_elapsed = time.time() - bootstrap_start
+
+        return BootstrapResults(
+            train_ci=train_ci,
+            test_ci=test_ci,
+            n_iterations=config.n_iterations,
+            confidence_level=config.confidence_level,
+            elapsed_seconds=bootstrap_elapsed,
+        )
 
     def fit(
         self,
@@ -264,12 +477,24 @@ class ModelTrainerStage(PipelineStage):
                 pvalue=pval
             ))
 
-        elapsed = time.time() - start_time
-
         # get scorecard params from config
         base_score = getattr(self.config, 'base_score', 600.0)
         pdo = getattr(self.config, 'pdo', 20.0)
         base_odds = getattr(self.config, 'base_odds', 50.0)
+
+        # Calculate bootstrap confidence intervals if enabled
+        bootstrap_results = None
+        if self._bootstrap_config.enabled:
+            bootstrap_results = self._calculate_bootstrap_ci(
+                X_train=X_train,
+                y_train=y_train,
+                X_test=X_test,
+                y_test=y_test,
+                model=self._model,
+                scaler=self._scaler,
+            )
+
+        elapsed = time.time() - start_time
 
         self._model_info = ModelInfo(
             n_features=len(feature_columns),
@@ -284,6 +509,7 @@ class ModelTrainerStage(PipelineStage):
             base_score=base_score,
             pdo=pdo,
             base_odds=base_odds,
+            bootstrap_results=bootstrap_results,
             elapsed_seconds=elapsed
         )
 
@@ -484,6 +710,11 @@ class ModelTrainerStage(PipelineStage):
                     'bin_points': sf.bin_points
                 })
 
+        # bootstrap confidence intervals
+        bootstrap_info = None
+        if info.bootstrap_results:
+            bootstrap_info = info.bootstrap_results.to_dict()
+
         return {
             'stage_name': 'ModelTrainerStage',
             'summary': {
@@ -503,7 +734,8 @@ class ModelTrainerStage(PipelineStage):
                 'base_odds': info.base_odds
             },
             'coefficients': coef_details,
-            'scorecard': scorecard_details
+            'scorecard': scorecard_details,
+            'bootstrap_confidence_intervals': bootstrap_info
         }
 
     def get_model(self) -> Optional[LogisticRegression]:
@@ -517,6 +749,29 @@ class ModelTrainerStage(PipelineStage):
     def get_scorecard_info(self) -> Optional[ScorecardInfo]:
         """Get scorecard definition."""
         return self._scorecard_info
+
+    def get_bootstrap_results(self) -> Optional[BootstrapResults]:
+        """Get bootstrap confidence interval results."""
+        if self._model_info:
+            return self._model_info.bootstrap_results
+        return None
+
+    def get_metric_ci(self, metric: str, dataset: str = "test") -> Optional[ConfidenceInterval]:
+        """Get confidence interval for a specific metric.
+
+        Args:
+            metric: One of "auc", "gini", "ks"
+            dataset: One of "train", "test"
+
+        Returns:
+            ConfidenceInterval for the requested metric, or None if not available
+        """
+        bootstrap = self.get_bootstrap_results()
+        if bootstrap is None:
+            return None
+
+        ci_dict = bootstrap.train_ci if dataset == "train" else bootstrap.test_ci
+        return ci_dict.get(metric)
 
     def get_feature_names(self) -> List[str]:
         """Get list of features used in model."""

@@ -113,7 +113,7 @@ class FinalFilterStage(PipelineStage):
 
         for feat in features:
             if len(features) < 2:
-                # cant calculate VIF with single feature
+                # cannot calculate VIF with a single feature
                 vif_values[feat] = 1.0
                 continue
 
@@ -217,7 +217,7 @@ class FinalFilterStage(PipelineStage):
             cov_matrix = np.linalg.inv(hessian)
             se = np.sqrt(np.diag(cov_matrix))[1:]  # skip intercept
         except np.linalg.LinAlgError:
-            # singular matrix, coefficents unreliable
+            # singular matrix, coefficients are unreliable
             se = np.full(len(features), np.inf)
 
         # Wald statistic and p-values
