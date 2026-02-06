@@ -1,5 +1,5 @@
 """
-Distribution visualizations for scorecard models.
+Distribution visualizations for reasoning models.
 
 Includes:
 - Score distribution histogram

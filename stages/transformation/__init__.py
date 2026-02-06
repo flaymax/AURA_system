@@ -1,5 +1,5 @@
 """
-Transformation stages for the scorecard pipeline.
+Transformation stages for the reasoning pipeline.
 
 These stages handle feature transformation:
 - WoEBinnerStage: WoE binning using decision tree-based optimal splits

@@ -1,5 +1,5 @@
 """
-Model evaluation module for scorecard analysis.
+Model evaluation module for reasoning analysis.
 
 Provides comprehensive evaluation utilities for:
 - Time-based stability analysis (PSI, Gini trends)

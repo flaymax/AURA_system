@@ -1,5 +1,5 @@
 """
-Scorecard Pipeline Orchestrator.
+Reasoning Pipeline Orchestrator.
 
 This module provides the main ScorecardPipeline class that chains together
 all processing stages and manages the end-to-end model building workflow.
@@ -52,7 +52,7 @@ class PipelineResult:
         final_features: list of features in final model
         final_model: trained sklearn model object
         coefficients: model coefficients with feature names
-        scorecard: points-based scorecard (if generated)
+        scorecard: points-based scoring (if generated)
         total_execution_time: how long entire pipeline took
         config: configuration used for this run
     """
@@ -144,10 +144,10 @@ class PipelineResult:
 # =============================================================================
 
 class ScorecardPipeline:
-    """Main pipeline orchestrator for scorecard model building.
+    """Main pipeline orchestrator for reasoning model building.
 
     This class manages the entire modeling workflow from raw data to
-    trained scorecard model. It chains together multiple processing
+    trained reasoning model. It chains together multiple processing
     stages and handles data flow between them.
 
     The pipeline is configurable via PipelineConfig and supports:
@@ -552,9 +552,9 @@ class ScorecardPipeline:
         return self.result.final_model.predict_proba(X_transformed)[:, 1]
 
     def predict_score(self, df: pd.DataFrame, pdo: float = 20, base_score: float = 600, base_odds: float = 50) -> np.ndarray:
-        """Generate scorecard points for new data.
+        """Generate points for new data.
 
-        Converts probability to points using standard scorecard formula:
+        Converts probability to points using standard formula:
         score = base_score - pdo * log(odds) / log(2)
 
         Args:

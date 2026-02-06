@@ -1,5 +1,5 @@
 """
-Distribution visualizations for scorecard models using Plotly.
+Distribution visualizations for reasoning models using Plotly.
 
 Interactive versions with warm, eye-pleasing colors:
 - Score distribution histogram

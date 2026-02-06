@@ -1,5 +1,5 @@
 """
-Visualization utilities for scorecard analysis.
+Visualization utilities for reasoning analysis.
 
 Contains plotting functions for gain charts, risk dashboards,
 and WoE monotonicity diagnostics.

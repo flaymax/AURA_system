@@ -1,5 +1,5 @@
 """
-Source utilities for scorecard modeling.
+Source utilities for reasoning modeling.
 
 Contains helper functions for logistic regression and feature type detection.
 """

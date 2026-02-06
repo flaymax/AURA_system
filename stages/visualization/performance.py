@@ -1,5 +1,5 @@
 """
-Performance visualizations for scorecard models.
+Performance visualizations for reasoning models.
 
 Includes:
 - ROC curves with AUC

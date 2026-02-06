@@ -1,5 +1,5 @@
 """
-Visualization module for scorecard model analysis.
+Visualization module for reasoning model analysis.
 
 Provides comprehensive visualizations for model evaluation:
 - Performance: ROC curves, AUC trends, KS plots

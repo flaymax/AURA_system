@@ -39,7 +39,7 @@ class ARBRCurve(BaseVisualization):
     """
     Approval Rate vs Bad Rate curve.
 
-    Shows the fundamental trade-off in credit decisions:
+    Shows the fundamental trade-off in approval decisions:
     - Approve more -> Higher bad rate (more defaults)
     - Approve less -> Lower bad rate but less business
 

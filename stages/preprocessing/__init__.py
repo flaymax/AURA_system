@@ -1,10 +1,10 @@
 """
-Preprocessing stages for the scorecard pipeline.
+Preprocessing stages for the reasoning pipeline.
 
 These stages handle initial data cleaning and preparation:
 - DataCleaner: removes nulls, constants, non-numeric features
 - TypeDetector: identifies feature types (binary, categorical, discrete, continuous)
-- MissingValueHandler: imputation strategies (TODO)
+- RejectInferenceStage: handles selection bias from rejected applications
 """
 
 from stages.preprocessing.cleaner import DataCleaner, DataCleanerConfig
@@ -14,6 +14,11 @@ from stages.preprocessing.type_detector import (
     FeatureType,
     FeatureTypeInfo,
 )
+from stages.preprocessing.reject_inference import (
+    RejectInferenceStage,
+    RejectInferenceInfo,
+    RejectInferenceLog,
+)
 
 __all__ = [
     "DataCleaner",
@@ -22,4 +27,7 @@ __all__ = [
     "TypeDetectorConfig",
     "FeatureType",
     "FeatureTypeInfo",
+    "RejectInferenceStage",
+    "RejectInferenceInfo",
+    "RejectInferenceLog",
 ]

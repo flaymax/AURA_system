@@ -1,5 +1,5 @@
 """
-Core module for scorecard pipeline infrastructure.
+Core module for reasoning pipeline infrastructure.
 
 Contains base classes, pipeline orchestrator and configuration utilities.
 """
@@ -20,6 +20,8 @@ from core.base import (
     FinalFilterConfig,
     DiagnosticsConfig,
     BootstrapConfig,
+    RejectInferenceConfig,
+    InteractionConfig,
     BinnerOptimization,
     SelectionMethod,
     ImputationStrategy,
@@ -73,6 +75,8 @@ __all__ = [
     "ModelConfig",
     "DiagnosticsConfig",
     "BootstrapConfig",
+    "RejectInferenceConfig",
+    "InteractionConfig",
     # Enums
     "BinnerOptimization",
     "SelectionMethod",

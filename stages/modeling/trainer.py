@@ -1,9 +1,9 @@
 """
-Model training stage for logistic regression scorecard.
+Model training stage for logistic regression reasoning model.
 
 Trains the final logistic regression model and converts it to
-a scorecard format with points-based scoring. Includes bootstrap
-confidence intervals for performance metrics.
+a points-based scoring format. Includes bootstrap confidence
+intervals for performance metrics.
 """
 
 from dataclasses import dataclass, field
@@ -83,7 +83,7 @@ class BootstrapResults:
 
 @dataclass
 class ScorecardFeature:
-    """Scorecard points for a single feature."""
+    """Points contribution for a single feature."""
     feature_name: str
     base_points: float  # points contribution at mean value
     coefficient: float  # for calculating points from WoE
@@ -105,7 +105,7 @@ class ModelInfo:
     test_ks: float
     # coefficients
     feature_coefficients: List[FeatureCoefficient] = field(default_factory=list)
-    # scorecard params
+    # scoring params
     base_score: float = 600.0
     pdo: float = 20.0  # points to double odds
     base_odds: float = 50.0  # odds at base score
@@ -117,7 +117,7 @@ class ModelInfo:
 
 @dataclass
 class ScorecardInfo:
-    """Full scorecard definition."""
+    """Full points-based scoring definition."""
     base_score: float
     pdo: float
     base_odds: float
@@ -130,14 +130,14 @@ class ScorecardInfo:
 
 class ModelTrainerStage(PipelineStage):
     """
-    Stage for training logistic regression and building scorecard.
+    Stage for training logistic regression and building points-based scoring.
 
     Performs the following:
     1. Fits logistic regression on WoE-transformed features
     2. Calculates performance metrics (AUC, Gini, KS)
-    3. Converts model to scorecard format (points-based)
+    3. Converts model to points-based format
 
-    The scorecard uses standard industry formulas:
+    The scoring uses standard industry formulas:
     Score = Base_Score + (Coefficient * WoE * Factor)
     where Factor = PDO / ln(2)
     """
@@ -151,7 +151,7 @@ class ModelTrainerStage(PipelineStage):
         Initialize ModelTrainerStage.
 
         Args:
-            config: ModelConfig with scorecard parameters.
+            config: ModelConfig with scoring parameters.
                    If None, uses defaults (base_score=600, pdo=20)
             bootstrap_config: BootstrapConfig for confidence intervals.
                    If None, uses defaults (enabled=True, n_iterations=1000)
@@ -477,7 +477,7 @@ class ModelTrainerStage(PipelineStage):
                 pvalue=pval
             ))
 
-        # get scorecard params from config
+        # get scoring params from config
         base_score = getattr(self.config, 'base_score', 600.0)
         pdo = getattr(self.config, 'pdo', 20.0)
         base_odds = getattr(self.config, 'base_odds', 50.0)
@@ -513,7 +513,7 @@ class ModelTrainerStage(PipelineStage):
             elapsed_seconds=elapsed
         )
 
-        # build scorecard
+        # build scoring definition
         self._build_scorecard(kwargs.get('binning_info'))
 
         self._is_fitted = True
@@ -521,7 +521,7 @@ class ModelTrainerStage(PipelineStage):
 
     def _build_scorecard(self, binning_info: Optional[Dict] = None):
         """
-        Build scorecard from fitted model.
+        Build scoring definition from fitted model.
 
         Converts logistic regression coefficients to points using:
         Score = Base_Score - PDO/ln(2) * (Intercept + sum(Coef_i * WoE_i))
@@ -619,9 +619,9 @@ class ModelTrainerStage(PipelineStage):
 
     def predict_score(self, data: pd.DataFrame) -> np.ndarray:
         """
-        Predict scorecard score.
+        Predict points-based score.
 
-        Higher score = lower risk (convention in credit scoring).
+        Higher score = lower risk (standard convention).
 
         Args:
             data: DataFrame with features
@@ -700,7 +700,7 @@ class ModelTrainerStage(PipelineStage):
                 'pvalue': round(fc.pvalue, 6) if fc.pvalue else None
             })
 
-        # scorecard details
+        # scoring details
         scorecard_details = []
         if self._scorecard_info:
             for sf in self._scorecard_info.features:
@@ -747,7 +747,7 @@ class ModelTrainerStage(PipelineStage):
         return self._model_info
 
     def get_scorecard_info(self) -> Optional[ScorecardInfo]:
-        """Get scorecard definition."""
+        """Get scoring definition."""
         return self._scorecard_info
 
     def get_bootstrap_results(self) -> Optional[BootstrapResults]:
@@ -787,7 +787,7 @@ class ModelTrainerStage(PipelineStage):
         if not self._is_fitted or self._scorecard_info is None:
             raise RuntimeError("Model not fitted")
 
-        lines = [f"-- Scorecard SQL"]
+        lines = [f"-- Scoring SQL"]
         lines.append(f"-- Base score: {self._scorecard_info.base_score:.2f}")
         lines.append(f"SELECT")
         lines.append(f"  {self._scorecard_info.base_score:.4f}")

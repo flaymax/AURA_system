@@ -1,5 +1,5 @@
 """
-Utility functions for scorecard modeling.
+Utility functions for reasoning modeling.
 
 Contains helper functions for metrics calculation and PSI analysis.
 """

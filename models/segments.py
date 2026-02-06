@@ -1,5 +1,5 @@
 """
-Segment-level performance analysis for scorecard models.
+Segment-level performance analysis for reasoning models.
 
 Evaluates model performance across different subpopulations:
 - Demographic segments (age, income, etc.)

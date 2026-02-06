@@ -5,7 +5,7 @@ Contains all pipeline stage implementations organized by category:
 - preprocessing: data cleaning, type detection, imputation
 - transformation: WoE binning, postprocessing
 - selection: clustering, stepwise selection, final filtering
-- modeling: model training, scorecard building
+- modeling: model training, points-based scoring
 - visualization: performance charts, distribution plots, AR/BR analysis
 """
 
@@ -15,6 +15,8 @@ from stages.preprocessing import (
     TypeDetector,
     TypeDetectorConfig,
     FeatureType,
+    RejectInferenceStage,
+    RejectInferenceInfo,
 )
 
 from stages.transformation import (
@@ -83,6 +85,8 @@ __all__ = [
     "TypeDetector",
     "TypeDetectorConfig",
     "FeatureType",
+    "RejectInferenceStage",
+    "RejectInferenceInfo",
     # Transformation
     "WoEBinnerStage",
     "WoEBinnerConfig",

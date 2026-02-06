@@ -1,5 +1,5 @@
 """
-Performance visualizations for scorecard models using Plotly.
+Performance visualizations for reasoning models using Plotly.
 
 Interactive versions with warm, eye-pleasing colors:
 - ROC curves with AUC

@@ -1,5 +1,5 @@
 """
-Time-based stability analysis for scorecard models.
+Time-based stability analysis for reasoning models.
 
 Monitors model performance and score distribution over time:
 - Gini/AUC trends by period

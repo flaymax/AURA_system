@@ -1,8 +1,8 @@
 """
-Modeling stages for the scorecard pipeline.
+Modeling stages for the reasoning pipeline.
 
-These stages handle model training and scorecard building:
-- ModelTrainerStage: Logistic regression training and scorecard conversion
+These stages handle model training and points-based scoring:
+- ModelTrainerStage: Logistic regression training and points conversion
 - Bootstrap confidence intervals for model metrics
 """
 
