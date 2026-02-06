@@ -1,0 +1,116 @@
+# Usage:
+#   python runner.py data.csv --target default_flag --config config.yaml
+
+general:
+  random_state: 42
+  verbose: true
+
+data:
+  sample_type_column: "sample_type"
+  train_ratio: 0.8
+
+cleaning:
+  enabled: true
+  max_null_ratio: 0.97
+  max_same_value_ratio: 0.97
+  exclude_columns: []
+
+type_detection:
+  enabled: true
+  cardinality_threshold: 10
+  unique_ratio_threshold: 0.05
+  force_numeric: []
+  force_categorical: []
+
+binning:
+  enabled: true
+  min_iv: 0.02
+  max_bins: 10
+  min_bin_size: 0.05
+  power: 3
+  handle_missing: true
+  monotonicity_mode: "warn"
+  psi_mode: "warn"
+  psi_threshold: 0.25
+
+clustering:
+  enabled: true
+  correlation_threshold: 0.7
+  linkage_method: "average"
+  selection_type: "max_test"
+  pvalue_filter_enabled: true
+  pvalue_threshold: 0.05
+
+stepwise:
+  enabled: true
+  alpha_enter: 0.05
+  alpha_exit: 0.10
+  max_features: null
+  min_features: 3
+  use_wald_test: true
+  use_lr_test: true
+  early_stopping:
+    enabled: true
+    patience: 5
+    min_improvement: 0.001
+    restore_best: true
+    monitor_metric: "test_auc"
+
+interactions:
+  enabled: false
+  interaction_types:
+    - "multiplicative"
+  max_interactions: 5
+  min_auc_improvement: 0.005
+  correlation_threshold: 0.5
+  pvalue_threshold: 0.05
+  test_all_pairs: false
+  candidate_features: null
+  exclude_features: []
+
+final_filter:
+  enabled: true
+  max_pvalue: 0.05
+  max_vif: 5.0
+  check_coefficient_sign: true
+  remove_insignificant: true
+
+training:
+  enabled: true
+  regularization: null
+  C: 1.0
+  fit_intercept: true
+  max_iter: 1000
+  solver: "lbfgs"
+
+bootstrap:
+  enabled: true
+  n_iterations: 1000
+  confidence_level: 0.95
+  metrics:
+    - "auc"
+    - "gini"
+    - "ks"
+  stratified: true
+
+reject_inference:
+  enabled: false
+  method: "fuzzy"
+  decision_column: "decision"
+  score_column: "application_score"
+  accept_value: 1
+  reject_value: 0
+  hard_cutoff_threshold: 0.5
+  parceling_n_bins: 10
+  augmentation_bad_rate: 0.5
+  weight_rejects: 1.0
+
+scorecard:
+  base_score: 600
+  pdo: 20
+  base_odds: 50
+
+logging:
+  level: "INFO"
+  file: null
+  timestamps: true
