@@ -11,8 +11,6 @@ Key features:
 - Monotonicity enforcement (optional)
 - Optimization by IV or R²
 - Comprehensive logging of all binning results
-
-Author: AURA Team
 """
 
 import logging
@@ -42,6 +40,55 @@ from pipeline.fit_transform import Binning, BinningSettings
 
 
 logger = logging.getLogger(__name__)
+
+
+class MonotonicityMode(Enum):
+    """How to handle non-monotonic WoE patterns.
+
+    ENFORCE: Drop features that are not monotonic (strictest)
+    WARN: Log warning but keep the feature (default)
+    IGNORE: Do not check monotonicity at all
+    """
+    ENFORCE = "enforce"
+    WARN = "warn"
+    IGNORE = "ignore"
+
+
+class MonotonicityDirection(Enum):
+    """Direction of monotonic WoE relationship.
+
+    INCREASING: WoE increases as feature value increases (e.g., income vs default)
+    DECREASING: WoE decreases as feature value increases (e.g., debt vs default)
+    NONE: Not monotonic or not checked
+    """
+    INCREASING = "increasing"
+    DECREASING = "decreasing"
+    NONE = "none"
+
+
+class PSIMode(Enum):
+    """How to handle features with high PSI (unstable distribution).
+
+    ENFORCE: Drop features with PSI above threshold (strictest)
+    WARN: Log warning but keep the feature (default)
+    IGNORE: Do not calculate or check PSI
+    """
+    ENFORCE = "enforce"
+    WARN = "warn"
+    IGNORE = "ignore"
+
+
+class PSILevel(Enum):
+    """Classification of PSI values.
+
+    Based on industry standard thresholds:
+    - STABLE: PSI < 0.1 (no significant population shift)
+    - MODERATE: 0.1 <= PSI < 0.25 (some shift, monitor closely)
+    - UNSTABLE: PSI >= 0.25 (significant shift, feature may be unreliable)
+    """
+    STABLE = "stable"
+    MODERATE = "moderate"
+    UNSTABLE = "unstable"
 
 
 # =============================================================================
@@ -80,6 +127,57 @@ class BinInfo:
 
 
 @dataclass
+class MonotonicityInfo:
+    """Detailed information about WoE monotonicity for a feature."""
+    is_monotonic: bool
+    direction: str  # "increasing", "decreasing", or "none"
+    n_violations: int  # number of bin transitions that violate monotonicity
+    violation_indices: List[int]  # indices where violations occur
+    woe_trend: List[float]  # WoE values in bin order (excluding NaN)
+    severity: str  # "none", "minor" (1-2 violations), "major" (3+ violations)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "is_monotonic": self.is_monotonic,
+            "direction": self.direction,
+            "n_violations": self.n_violations,
+            "violation_indices": self.violation_indices,
+            "woe_trend": [round(w, 4) for w in self.woe_trend],
+            "severity": self.severity,
+        }
+
+
+@dataclass
+class PSIInfo:
+    """Population Stability Index information for a feature.
+
+    PSI measures the shift in distribution between train and test populations.
+    Calculated at the bin level using the WoE binning structure.
+
+    Standard interpretation:
+    - PSI < 0.1: Stable, no significant shift
+    - 0.1 <= PSI < 0.25: Moderate shift, needs monitoring
+    - PSI >= 0.25: Significant shift, feature may be unstable
+    """
+    psi_value: float
+    level: str  # "stable", "moderate", "unstable"
+    train_distribution: List[float]  # % in each bin for train
+    test_distribution: List[float]  # % in each bin for test
+    bin_contributions: List[float]  # PSI contribution from each bin
+    is_stable: bool  # True if PSI < threshold
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "psi_value": round(self.psi_value, 4),
+            "level": self.level,
+            "train_distribution": [round(x, 4) for x in self.train_distribution],
+            "test_distribution": [round(x, 4) for x in self.test_distribution],
+            "bin_contributions": [round(x, 4) for x in self.bin_contributions],
+            "is_stable": self.is_stable,
+        }
+
+
+@dataclass
 class BinningInfo:
     """Comprehensive binning information for a single feature.
 
@@ -95,8 +193,10 @@ class BinningInfo:
     hhi: float  # Herfindahl-Hirschman Index
     r2: float
     is_monotonic: bool
-    tree_depth_used: int  # which depth gave best result
-    has_nan_bin: bool
+    monotonicity_info: Optional[MonotonicityInfo] = None
+    psi_info: Optional[PSIInfo] = None  # PSI between train/test
+    tree_depth_used: int = 0  # which depth gave best result
+    has_nan_bin: bool = False
     status: str = "success"  # success, failed, skipped
     error_message: str = ""
 
@@ -111,6 +211,8 @@ class BinningInfo:
             "hhi": round(self.hhi, 4) if self.hhi else None,
             "r2": round(self.r2, 4) if self.r2 else None,
             "is_monotonic": self.is_monotonic,
+            "monotonicity_info": self.monotonicity_info.to_dict() if self.monotonicity_info else None,
+            "psi_info": self.psi_info.to_dict() if self.psi_info else None,
             "tree_depth_used": self.tree_depth_used,
             "has_nan_bin": self.has_nan_bin,
             "status": self.status,
@@ -199,7 +301,16 @@ class WoEBinnerConfig:
         optimization_mode: IV or R2 optimization
         power: maximum tree depth for splitting (higher = more bins possible)
         min_leaf_ratio: minimum fraction of samples in each bin
-        enforce_monotonicity: whether WoE must be monotonic
+        enforce_monotonicity: whether to request monotonic binning from the binner
+        monotonicity_mode: how to handle non-monotonic results:
+            - "enforce": drop features that are not monotonic
+            - "warn": log warning but keep the feature (default)
+            - "ignore": do not check monotonicity
+        psi_mode: how to handle features with high PSI (train vs test shift):
+            - "enforce": drop features with PSI above threshold
+            - "warn": log warning but keep the feature (default)
+            - "ignore": do not calculate or check PSI
+        psi_threshold: PSI value above which a feature is considered unstable (default 0.25)
         min_iv: minimum IV to keep feature after binning
         good_mark: target value for "good" class (default 0)
         bad_mark: target value for "bad" class (default 1)
@@ -210,6 +321,9 @@ class WoEBinnerConfig:
     power: int = 3  # max tree depth
     min_leaf_ratio: float = 0.1  # min samples in leaf
     enforce_monotonicity: bool = True
+    monotonicity_mode: str = "warn"  # "enforce", "warn", or "ignore"
+    psi_mode: str = "warn"  # "enforce", "warn", or "ignore"
+    psi_threshold: float = 0.25  # PSI above this is considered unstable
     min_iv: float = 0.02  # drop features with IV below this
     good_mark: int = 0
     bad_mark: int = 1
@@ -221,14 +335,34 @@ class WoEBinnerConfig:
             raise ValueError(
                 f"optimization_mode must be 'IV' or 'R2', got {self.optimization_mode}"
             )
+        if self.monotonicity_mode not in ("enforce", "warn", "ignore"):
+            raise ValueError(
+                f"monotonicity_mode must be 'enforce', 'warn', or 'ignore', "
+                f"got {self.monotonicity_mode}"
+            )
+        if self.psi_mode not in ("enforce", "warn", "ignore"):
+            raise ValueError(
+                f"psi_mode must be 'enforce', 'warn', or 'ignore', "
+                f"got {self.psi_mode}"
+            )
         if self.power < 1:
             raise ValueError(f"power must be >= 1, got {self.power}")
         if self.good_mark == self.bad_mark:
             raise ValueError("good_mark and bad_mark cannot be equal")
+        if self.psi_threshold <= 0:
+            raise ValueError(f"psi_threshold must be positive, got {self.psi_threshold}")
 
     def get_binner_type(self) -> BinnerType:
         """Convert to BinnerType enum."""
         return BinnerType.IV if self.optimization_mode == "IV" else BinnerType.R2
+
+    def get_monotonicity_mode(self) -> MonotonicityMode:
+        """Convert string to MonotonicityMode enum."""
+        return MonotonicityMode(self.monotonicity_mode)
+
+    def get_psi_mode(self) -> PSIMode:
+        """Convert string to PSIMode enum."""
+        return PSIMode(self.psi_mode)
 
 
 # =============================================================================
@@ -289,6 +423,7 @@ class WoEBinnerStage(PipelineStage):
         X: pd.DataFrame,
         y: Optional[pd.Series] = None,
         target_col: str = "target",
+        sample_type: Optional[pd.Series] = None,
         **kwargs
     ) -> "WoEBinnerStage":
         """Fit WoE binning to training data.
@@ -297,6 +432,8 @@ class WoEBinnerStage(PipelineStage):
             X: feature DataFrame
             y: target Series (binary 0/1)
             target_col: name for target column (used internally)
+            sample_type: Series indicating sample type (0=train, 1=test, 2=valid)
+                        Used for PSI calculation. If None, PSI is not calculated.
             **kwargs: additional arguments
 
         Returns:
@@ -322,6 +459,9 @@ class WoEBinnerStage(PipelineStage):
                 "power": self.config.power,
                 "min_leaf_ratio": self.config.min_leaf_ratio,
                 "enforce_monotonicity": self.config.enforce_monotonicity,
+                "monotonicity_mode": self.config.monotonicity_mode,
+                "psi_mode": self.config.psi_mode,
+                "psi_threshold": self.config.psi_threshold,
                 "min_iv": self.config.min_iv,
             }
         )
@@ -370,6 +510,25 @@ class WoEBinnerStage(PipelineStage):
 
         # Filter features by IV threshold
         self._filter_by_iv()
+
+        # Filter or warn about non-monotonic features
+        self._filter_by_monotonicity()
+
+        # Calculate and filter by PSI if sample_type is provided
+        if sample_type is not None and self.config.get_psi_mode() != PSIMode.IGNORE:
+            train_mask = sample_type == 0
+            test_mask = sample_type == 1
+            if train_mask.sum() > 0 and test_mask.sum() > 0:
+                self._calculate_psi(X, train_mask, test_mask)
+                self._filter_by_psi()
+            else:
+                self._stage_log.add_warning(
+                    "PSI calculation skipped: insufficient train or test samples"
+                )
+        elif self.config.get_psi_mode() != PSIMode.IGNORE:
+            self._stage_log.add_warning(
+                "PSI calculation skipped: sample_type not provided"
+            )
 
         # Update log
         self._stage_log.features_binned = list(self._binning_info.keys())
@@ -441,9 +600,9 @@ class WoEBinnerStage(PipelineStage):
             )
             bins.append(bin_info)
 
-        # Check monotonicity of WoE values (excluding NaN bin)
+        # Analyze monotonicity of WoE values (excluding NaN bin)
         non_nan_woes = [b.woe for b in bins if not b.is_nan_bin]
-        is_monotonic = self._check_monotonicity(non_nan_woes)
+        monotonicity_info = self._analyze_monotonicity(non_nan_woes)
 
         return BinningInfo(
             feature_name=feature_name,
@@ -454,7 +613,8 @@ class WoEBinnerStage(PipelineStage):
             gini=binning_obj._gini if hasattr(binning_obj, "_gini") else 0,
             hhi=binning_obj._hhi if hasattr(binning_obj, "_hhi") else 0,
             r2=binning_obj._r2 if hasattr(binning_obj, "_r2") else 0,
-            is_monotonic=is_monotonic,
+            is_monotonic=monotonicity_info.is_monotonic,
+            monotonicity_info=monotonicity_info,
             tree_depth_used=self.config.power,  # actual depth is not exposed
             has_nan_bin=has_nan_bin,
             status="success",
@@ -469,6 +629,78 @@ class WoEBinnerStage(PipelineStage):
         decreasing = all(values[i] >= values[i + 1] for i in range(len(values) - 1))
 
         return increasing or decreasing
+
+    def _analyze_monotonicity(self, woe_values: List[float]) -> MonotonicityInfo:
+        """Analyze monotonicity of WoE values in detail.
+
+        Returns comprehensive information about the monotonicity pattern,
+        including direction, violations, and severity.
+
+        Args:
+            woe_values: List of WoE values in bin order (excluding NaN bin)
+
+        Returns:
+            MonotonicityInfo with detailed analysis
+        """
+        if len(woe_values) <= 1:
+            return MonotonicityInfo(
+                is_monotonic=True,
+                direction=MonotonicityDirection.NONE.value,
+                n_violations=0,
+                violation_indices=[],
+                woe_trend=woe_values,
+                severity="none"
+            )
+
+        # Count increasing and decreasing transitions
+        increasing_count = 0
+        decreasing_count = 0
+        violation_indices = []
+
+        for i in range(len(woe_values) - 1):
+            if woe_values[i + 1] > woe_values[i]:
+                increasing_count += 1
+            elif woe_values[i + 1] < woe_values[i]:
+                decreasing_count += 1
+            # Equal values do not count as violations
+
+        # Determine expected direction based on majority of transitions
+        if increasing_count > decreasing_count:
+            expected_direction = MonotonicityDirection.INCREASING
+            # Violations are decreasing transitions
+            for i in range(len(woe_values) - 1):
+                if woe_values[i + 1] < woe_values[i]:
+                    violation_indices.append(i)
+        elif decreasing_count > increasing_count:
+            expected_direction = MonotonicityDirection.DECREASING
+            # Violations are increasing transitions
+            for i in range(len(woe_values) - 1):
+                if woe_values[i + 1] > woe_values[i]:
+                    violation_indices.append(i)
+        else:
+            # No clear direction
+            expected_direction = MonotonicityDirection.NONE
+            violation_indices = []
+
+        n_violations = len(violation_indices)
+        is_monotonic = n_violations == 0
+
+        # Determine severity
+        if n_violations == 0:
+            severity = "none"
+        elif n_violations <= 2:
+            severity = "minor"
+        else:
+            severity = "major"
+
+        return MonotonicityInfo(
+            is_monotonic=is_monotonic,
+            direction=expected_direction.value if is_monotonic else MonotonicityDirection.NONE.value,
+            n_violations=n_violations,
+            violation_indices=violation_indices,
+            woe_trend=woe_values,
+            severity=severity
+        )
 
     def _filter_by_iv(self) -> None:
         """Filter features by minimum IV threshold."""
@@ -489,6 +721,227 @@ class WoEBinnerStage(PipelineStage):
                 f"{'...' if len(dropped_low_iv) > 5 else ''}"
             )
 
+    def _filter_by_monotonicity(self) -> None:
+        """Filter or warn about non-monotonic features based on config.
+
+        Depending on monotonicity_mode:
+        - "enforce": Remove non-monotonic features from selected list
+        - "warn": Log warnings but keep features
+        - "ignore": Do nothing
+        """
+        mode = self.config.get_monotonicity_mode()
+
+        if mode == MonotonicityMode.IGNORE:
+            return
+
+        non_monotonic_features = []
+        for feat_name, info in self._binning_info.items():
+            if not info.is_monotonic and info.woe_feature_name in self._selected_features:
+                mono_info = info.monotonicity_info
+                non_monotonic_features.append({
+                    "name": feat_name,
+                    "woe_name": info.woe_feature_name,
+                    "iv": info.iv,
+                    "n_violations": mono_info.n_violations if mono_info else 0,
+                    "severity": mono_info.severity if mono_info else "unknown",
+                    "direction": mono_info.direction if mono_info else "none",
+                })
+
+        if not non_monotonic_features:
+            return
+
+        # Build warning message
+        warning_details = []
+        for feat in non_monotonic_features[:10]:
+            warning_details.append(
+                f"{feat['name']} (IV={feat['iv']:.4f}, violations={feat['n_violations']}, "
+                f"severity={feat['severity']})"
+            )
+
+        if mode == MonotonicityMode.ENFORCE:
+            # Remove non-monotonic features
+            dropped_count = 0
+            for feat in non_monotonic_features:
+                if feat["woe_name"] in self._selected_features:
+                    self._selected_features.remove(feat["woe_name"])
+                    self._stage_log.features_skipped.append(feat["name"])
+                    dropped_count += 1
+
+            self._stage_log.add_warning(
+                f"MONOTONICITY ENFORCED: {dropped_count} non-monotonic features dropped: "
+                f"{warning_details}"
+                f"{'...' if len(non_monotonic_features) > 10 else ''}"
+            )
+
+        elif mode == MonotonicityMode.WARN:
+            # Just log warning, keep features
+            self._stage_log.add_warning(
+                f"MONOTONICITY WARNING: {len(non_monotonic_features)} features have "
+                f"non-monotonic WoE patterns (kept in model): {warning_details}"
+                f"{'...' if len(non_monotonic_features) > 10 else ''}"
+            )
+
+    def _calculate_psi(
+        self,
+        X: pd.DataFrame,
+        train_mask: pd.Series,
+        test_mask: pd.Series
+    ) -> None:
+        """Calculate PSI (Population Stability Index) for each feature.
+
+        PSI measures distribution shift between train and test populations
+        using the WoE bin structure. High PSI indicates the feature distribution
+        has shifted significantly, which may affect model stability.
+
+        Formula: PSI = Σ (Test% - Train%) * ln(Test% / Train%)
+
+        Args:
+            X: Feature DataFrame
+            train_mask: Boolean mask for training samples
+            test_mask: Boolean mask for test samples
+        """
+        mode = self.config.get_psi_mode()
+
+        if mode == PSIMode.IGNORE:
+            return
+
+        # Minimum percentage to avoid log(0) issues
+        MIN_PCT = 0.0001
+
+        for feat_name, info in self._binning_info.items():
+            if info.status != "success":
+                continue
+
+            try:
+                feature_values = X[feat_name]
+                train_values = feature_values[train_mask]
+                test_values = feature_values[test_mask]
+
+                # Get bin boundaries from binning info
+                bins = info.bins
+                train_distribution = []
+                test_distribution = []
+                bin_contributions = []
+
+                for bin_info in bins:
+                    if bin_info.is_nan_bin:
+                        # Count NaN values
+                        train_count = train_values.isna().sum()
+                        test_count = test_values.isna().sum()
+                    else:
+                        # Count values in this bin range
+                        lower = bin_info.lower_bound
+                        upper = bin_info.upper_bound
+
+                        if lower == float('-inf') or lower is None:
+                            train_count = (train_values <= upper).sum()
+                            test_count = (test_values <= upper).sum()
+                        elif upper == float('inf') or upper is None:
+                            train_count = (train_values > lower).sum()
+                            test_count = (test_values > lower).sum()
+                        else:
+                            train_count = ((train_values > lower) & (train_values <= upper)).sum()
+                            test_count = ((test_values > lower) & (test_values <= upper)).sum()
+
+                    # Calculate percentages
+                    train_pct = max(train_count / len(train_values), MIN_PCT) if len(train_values) > 0 else MIN_PCT
+                    test_pct = max(test_count / len(test_values), MIN_PCT) if len(test_values) > 0 else MIN_PCT
+
+                    train_distribution.append(train_pct)
+                    test_distribution.append(test_pct)
+
+                    # PSI contribution from this bin
+                    contribution = (test_pct - train_pct) * np.log(test_pct / train_pct)
+                    bin_contributions.append(contribution)
+
+                # Total PSI
+                psi_value = sum(bin_contributions)
+
+                # Classify PSI level
+                if psi_value < 0.1:
+                    level = PSILevel.STABLE.value
+                    is_stable = True
+                elif psi_value < 0.25:
+                    level = PSILevel.MODERATE.value
+                    is_stable = psi_value < self.config.psi_threshold
+                else:
+                    level = PSILevel.UNSTABLE.value
+                    is_stable = psi_value < self.config.psi_threshold
+
+                # Store PSI info
+                info.psi_info = PSIInfo(
+                    psi_value=psi_value,
+                    level=level,
+                    train_distribution=train_distribution,
+                    test_distribution=test_distribution,
+                    bin_contributions=bin_contributions,
+                    is_stable=is_stable,
+                )
+
+            except Exception as e:
+                self._stage_log.add_warning(
+                    f"Failed to calculate PSI for {feat_name}: {str(e)}"
+                )
+
+    def _filter_by_psi(self) -> None:
+        """Filter or warn about features with high PSI based on config.
+
+        Depending on psi_mode:
+        - "enforce": Remove features with PSI above threshold
+        - "warn": Log warnings but keep features
+        - "ignore": Do nothing (PSI not even calculated)
+        """
+        mode = self.config.get_psi_mode()
+
+        if mode == PSIMode.IGNORE:
+            return
+
+        unstable_features = []
+        for feat_name, info in self._binning_info.items():
+            if info.psi_info and not info.psi_info.is_stable:
+                if info.woe_feature_name in self._selected_features:
+                    unstable_features.append({
+                        "name": feat_name,
+                        "woe_name": info.woe_feature_name,
+                        "iv": info.iv,
+                        "psi": info.psi_info.psi_value,
+                        "level": info.psi_info.level,
+                    })
+
+        if not unstable_features:
+            return
+
+        # Build warning message
+        warning_details = []
+        for feat in unstable_features[:10]:
+            warning_details.append(
+                f"{feat['name']} (IV={feat['iv']:.4f}, PSI={feat['psi']:.4f}, "
+                f"level={feat['level']})"
+            )
+
+        if mode == PSIMode.ENFORCE:
+            # Remove unstable features
+            dropped_count = 0
+            for feat in unstable_features:
+                if feat["woe_name"] in self._selected_features:
+                    self._selected_features.remove(feat["woe_name"])
+                    self._stage_log.features_skipped.append(feat["name"])
+                    dropped_count += 1
+
+            self._stage_log.add_warning(
+                f"PSI ENFORCED: {dropped_count} features dropped due to high PSI "
+                f"(>{self.config.psi_threshold}): {warning_details}"
+                f"{'...' if len(unstable_features) > 10 else ''}"
+            )
+
+        elif mode == PSIMode.WARN:
+            # Just log warning, keep features
+            self._stage_log.add_warning(
+                f"PSI WARNING: {len(unstable_features)} features have high PSI "
+                f"(>{self.config.psi_threshold}, kept in model): {warning_details}"
+                f"{'...' if len(unstable_features) > 10 else ''}"
+            )
+
     def _compute_summary_stats(self) -> None:
         """Compute summary statistics for the log."""
         if not self._binning_info:
@@ -496,6 +949,28 @@ class WoEBinnerStage(PipelineStage):
 
         iv_values = [info.iv for info in self._binning_info.values()]
         n_bins_list = [info.n_bins for info in self._binning_info.values()]
+
+        # Count monotonicity by severity
+        mono_by_severity = {"none": 0, "minor": 0, "major": 0}
+        for info in self._binning_info.values():
+            if info.monotonicity_info:
+                mono_by_severity[info.monotonicity_info.severity] = \
+                    mono_by_severity.get(info.monotonicity_info.severity, 0) + 1
+
+        # Count monotonicity by direction
+        mono_by_direction = {"increasing": 0, "decreasing": 0, "none": 0}
+        for info in self._binning_info.values():
+            if info.monotonicity_info and info.is_monotonic:
+                direction = info.monotonicity_info.direction
+                mono_by_direction[direction] = mono_by_direction.get(direction, 0) + 1
+
+        # Count PSI by level
+        psi_by_level = {"stable": 0, "moderate": 0, "unstable": 0}
+        psi_values = []
+        for info in self._binning_info.values():
+            if info.psi_info:
+                psi_by_level[info.psi_info.level] = psi_by_level.get(info.psi_info.level, 0) + 1
+                psi_values.append(info.psi_info.psi_value)
 
         self._stage_log.summary_stats = {
             "total_features_processed": len(self._binning_info),
@@ -515,9 +990,29 @@ class WoEBinnerStage(PipelineStage):
             "features_with_nan_bin": sum(
                 1 for info in self._binning_info.values() if info.has_nan_bin
             ),
-            "non_monotonic_features": sum(
-                1 for info in self._binning_info.values() if not info.is_monotonic
-            ),
+            "monotonicity": {
+                "n_monotonic": sum(
+                    1 for info in self._binning_info.values() if info.is_monotonic
+                ),
+                "n_non_monotonic": sum(
+                    1 for info in self._binning_info.values() if not info.is_monotonic
+                ),
+                "by_severity": mono_by_severity,
+                "by_direction": mono_by_direction,
+                "mode": self.config.monotonicity_mode,
+            },
+            "psi": {
+                "n_calculated": len(psi_values),
+                "by_level": psi_by_level,
+                "psi_stats": {
+                    "min": round(min(psi_values), 4) if psi_values else None,
+                    "max": round(max(psi_values), 4) if psi_values else None,
+                    "mean": round(np.mean(psi_values), 4) if psi_values else None,
+                    "median": round(np.median(psi_values), 4) if psi_values else None,
+                },
+                "mode": self.config.psi_mode,
+                "threshold": self.config.psi_threshold,
+            },
         }
 
     def _log_binning_summary(self) -> None:

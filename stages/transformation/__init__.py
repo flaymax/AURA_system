@@ -10,10 +10,22 @@ from stages.transformation.woe_binner import (
     WoEBinnerStage,
     WoEBinnerConfig,
     BinningInfo,
+    MonotonicityInfo,
+    MonotonicityMode,
+    MonotonicityDirection,
+    PSIInfo,
+    PSIMode,
+    PSILevel,
 )
 
 __all__ = [
     "WoEBinnerStage",
     "WoEBinnerConfig",
     "BinningInfo",
+    "MonotonicityInfo",
+    "MonotonicityMode",
+    "MonotonicityDirection",
+    "PSIInfo",
+    "PSIMode",
+    "PSILevel",
 ]
