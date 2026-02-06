@@ -7,8 +7,6 @@ by web frontend or API.
 
 When a critical error occurs (like no features remaining), the pipeline
 raises a PipelineTrigger exception which is caught and logged to JSON file.
-
-Author: AURA Team
 """
 
 import json
@@ -44,7 +42,7 @@ class TriggerSeverity(Enum):
 class TriggerCategory(Enum):
     """Category of trigger for grouping and filtering.
 
-    Helps frontend to display apropriate messages and icons.
+    Helps frontend display appropriate messages and icons.
     """
     DATA_QUALITY = "data_quality"
     FEATURE_SELECTION = "feature_selection"
@@ -196,14 +194,14 @@ class TriggerManager:
         self.session_id = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
         self.triggers: List[TriggerDetails] = []
 
-        # Create output directory if doesnt exist
+        # Create output directory if it does not exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def log_trigger(self, trigger: TriggerDetails, save_to_file: bool = True) -> None:
         """Log trigger without raising exception.
 
         Use this for warnings and informational triggers that
-        shouldnt stop the pipeline.
+        should not stop the pipeline.
 
         Args:
             trigger: trigger details to log
@@ -420,14 +418,14 @@ def create_data_quality_trigger(
     )
 
 
-# Global trigger manager instance (can be overriden)
+# Global trigger manager instance (can be overridden)
 _global_trigger_manager: Optional[TriggerManager] = None
 
 
 def get_trigger_manager() -> TriggerManager:
     """Get global trigger manager instance.
 
-    Creates one if doesnt exist yet.
+    Creates one if it does not exist yet.
     """
     global _global_trigger_manager
     if _global_trigger_manager is None:

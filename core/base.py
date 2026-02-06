@@ -4,8 +4,6 @@ Base classes for the scorecard modeling pipeline.
 This module provides abstract base class for all pipeline stages,
 configuration dataclasses and result containers. All stages should
 inherit from PipelineStage and implement required methods.
-
-Author: AURA Team
 """
 
 from abc import ABC, abstractmethod
@@ -31,7 +29,7 @@ logger = logging.getLogger(__name__)
 class StageStatus(Enum):
     """Status of pipeline stage execution.
 
-    Used to track wheter stage was fitted succesfully or failed.
+    Used to track whether stage was fitted successfully or failed.
     """
     NOT_FITTED = "not_fitted"
     FITTED = "fitted"
@@ -106,8 +104,8 @@ class PreprocessingConfig:
 class TypeDetectionConfig:
     """Configuration for feature type detection.
 
-    We need to distinguish between numeric and categorical features
-    beacuse they require different binning strategies.
+    Distinguishes between numeric and categorical features
+    because they require different binning strategies.
     """
     cardinality_threshold: int = 10  # below this -> categorical
     unique_ratio_threshold: float = 0.05  # above this -> likely ID column
@@ -119,8 +117,8 @@ class TypeDetectionConfig:
 class ImputationConfig:
     """Configuration for missing value imputation.
 
-    Usually we dont impute for WoE models since binner handles NaN,
-    but this is here for flexibility.
+    Usually not needed for WoE models since the binner handles NaN values,
+    but this option is here for flexibility.
     """
     strategy: ImputationStrategy = ImputationStrategy.NONE
     constant_value: Optional[float] = None  # used when strategy is CONSTANT
@@ -145,7 +143,7 @@ class BinningConfig:
     min_bin_size: float = 0.05
     max_bins: int = 10
     monotonic: bool = True
-    min_iv: float = 0.02  # features with IV < 0.02 are usualy weak
+    min_iv: float = 0.02  # features with IV < 0.02 are usually weak
     handle_missing: bool = True
 
     def __post_init__(self):
@@ -174,19 +172,25 @@ class ClusteringConfig:
     """Configuration for feature clustering stage.
 
     Groups correlated features and selects best representative
-    from each cluster to reduce multicolinearity.
+    from each cluster to reduce multicolinearity. Optionally filters
+    selected features by statistical significance using logistic regression.
 
     Attributes:
         correlation_threshold: features with |corr| > threshold are clustered
         linkage_method: hierarchical clustering linkage method
         selection_type: how to pick representative from cluster
         distance_metric: how to compute feature distance (usually 1 - |corr|)
+        min_cluster_size: minimum number of features to form a cluster
+        pvalue_filter_enabled: whether to filter features by p-value after clustering
+        pvalue_threshold: maximum p-value to keep a feature (default 0.05)
     """
     correlation_threshold: float = 0.7
     linkage_method: str = "average"  # average, complete, ward
     selection_type: str = "max_train"  # max_train, max_test, closest_train_test, center_cluster
     distance_metric: str = "correlation"
     min_cluster_size: int = 1
+    pvalue_filter_enabled: bool = True
+    pvalue_threshold: float = 0.05
 
 
 @dataclass
@@ -235,7 +239,7 @@ class ModelConfig:
 
     def __post_init__(self):
         if self.regularization == "l1" and self.solver == "lbfgs":
-            # lbfgs doesnt support l1, switch to saga
+            # lbfgs does not support L1, switching to saga
             logger.warning("Switching solver to 'saga' for L1 regularization")
             self.solver = "saga"
 
@@ -249,6 +253,42 @@ class DiagnosticsConfig:
     generate_lift_charts: bool = True
     generate_score_distribution: bool = True
     n_score_bins: int = 10
+
+
+@dataclass
+class BootstrapConfig:
+    """Configuration for bootstrap confidence intervals.
+
+    Bootstrap resampling provides confidence intervals for model metrics
+    (AUC, Gini, KS) without assuming a specific distribution. This helps
+    quantify uncertainty in performance estimates.
+
+    Attributes:
+        enabled: whether to calculate bootstrap CIs
+        n_iterations: number of bootstrap resamples (1000 is standard)
+        confidence_level: confidence level for intervals (0.95 = 95% CI)
+        random_state: seed for reproducibility
+        metrics: which metrics to bootstrap ("auc", "gini", "ks")
+        stratified: whether to use stratified resampling (preserves class ratio)
+    """
+    enabled: bool = True
+    n_iterations: int = 1000
+    confidence_level: float = 0.95
+    random_state: int = 42
+    metrics: List[str] = field(default_factory=lambda: ["auc", "gini", "ks"])
+    stratified: bool = True
+
+    def __post_init__(self):
+        if self.n_iterations < 100:
+            raise ValueError(f"n_iterations should be >= 100, got {self.n_iterations}")
+        if not 0 < self.confidence_level < 1:
+            raise ValueError(
+                f"confidence_level must be between 0 and 1, got {self.confidence_level}"
+            )
+        valid_metrics = {"auc", "gini", "ks"}
+        for m in self.metrics:
+            if m not in valid_metrics:
+                raise ValueError(f"Invalid metric '{m}'. Must be one of {valid_metrics}")
 
 
 @dataclass
@@ -268,6 +308,7 @@ class PipelineConfig:
     final_filter: FinalFilterConfig = field(default_factory=FinalFilterConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     diagnostics: DiagnosticsConfig = field(default_factory=DiagnosticsConfig)
+    bootstrap: BootstrapConfig = field(default_factory=BootstrapConfig)
 
     # general settings
     random_state: int = 42
@@ -294,7 +335,7 @@ class PipelineConfig:
     def from_dict(cls, data: Dict[str, Any]) -> "PipelineConfig":
         """Create config from dictionary.
 
-        Note: this is simplified version, doesnt handle all edge cases
+        Note: This is a simplified version that does not handle all edge cases,
         but works for basic usage.
         """
         # TODO: implement proper deserialization with enum handling
@@ -418,7 +459,7 @@ class PipelineStage(ABC):
 
         Args:
             X: feature DataFrame
-            y: target Series (optional, some stages dont need it)
+            y: target Series (optional, some stages do not need it)
             **kwargs: additional arguments (e.g. sample_weights)
 
         Returns:
@@ -452,7 +493,7 @@ class PipelineStage(ABC):
         """Fit and transform in single step.
 
         Convenience method that calls fit() then transform().
-        More efficient than calling them seperately in some cases.
+        More efficient than calling them separately in some cases.
 
         Args:
             X: feature DataFrame
@@ -503,7 +544,7 @@ class PipelineStage(ABC):
         """Verify that stage has been fitted.
 
         Raises:
-            RuntimeError: if stage hasnt been fitted yet
+            RuntimeError: if stage has not been fitted yet
         """
         if not self._is_fitted:
             raise RuntimeError(

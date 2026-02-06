@@ -10,8 +10,6 @@ The pipeline follows this sequence:
 3. Feature Selection (clustering, stepwise, final filtering)
 4. Model Training (logistic regression)
 5. Diagnostics (optional, run after training)
-
-Author: AURA Team
 """
 
 import time
@@ -47,7 +45,7 @@ class PipelineResult:
     """Container for complete pipeline execution results.
 
     Stores results from all stages, final model, and metadata.
-    Use this to inspect what happend during pipeline run.
+    Use this to inspect what happened during the pipeline run.
 
     Attributes:
         stage_results: dict mapping stage name to StageResult
@@ -454,7 +452,7 @@ class ScorecardPipeline:
             - y: target Series (training data only)
             - metadata_cols: list of non-feature columns
         """
-        # Identify metadata columns that shouldnt be used as features
+        # Identify metadata columns that should not be used as features
         metadata_cols = [
             self._target_col,
             self._sample_type_col,
@@ -517,7 +515,7 @@ class ScorecardPipeline:
             Transformed DataFrame ready for scoring
 
         Raises:
-            RuntimeError: if pipeline hasnt been fitted
+            RuntimeError: if pipeline has not been fitted
         """
         if not self._is_fitted:
             raise RuntimeError("Pipeline not fitted. Call fit() first.")
@@ -590,10 +588,10 @@ class ScorecardPipeline:
             PipelineResult with all stage results and final model
 
         Raises:
-            RuntimeError: if pipeline hasnt been run
+            RuntimeError: if pipeline has not been run
         """
         if self.result is None:
-            raise RuntimeError("Pipeline hasn't been run yet. Call fit() first.")
+            raise RuntimeError("Pipeline has not been run yet. Call fit() first.")
         return self.result
 
     def get_feature_importance(self) -> pd.DataFrame:
