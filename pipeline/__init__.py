@@ -1,7 +1,7 @@
 """
 Pipeline module with core binning and clustering implementations.
 
-Contains the original/legacy implementations that are wrapped by stage classes:
+Contains the core implementations that are wrapped by stage classes:
 - Binner: WoE binning using decision trees
 - Binning: Individual feature binning with metrics
 - ClusterAnalysis: Hierarchical clustering for feature selection

@@ -15,8 +15,10 @@ from stages.preprocessing import (
     TypeDetector,
     TypeDetectorConfig,
     FeatureType,
+    FeatureTypeInfo,
     RejectInferenceStage,
     RejectInferenceInfo,
+    RejectInferenceLog,
 )
 
 from stages.transformation import (
@@ -39,10 +41,14 @@ from stages.selection import (
     StepwiseSelectionStage,
     StepwiseFeatureInfo,
     StepwiseInfo,
+    EarlyStoppingInfo,
     FinalFilterStage,
     FinalFilterConfig,
     FeatureFilterInfo,
     FinalFilterInfo,
+    InteractionDetectorStage,
+    InteractionCandidate,
+    InteractionInfo,
 )
 
 from stages.modeling import (
@@ -85,8 +91,10 @@ __all__ = [
     "TypeDetector",
     "TypeDetectorConfig",
     "FeatureType",
+    "FeatureTypeInfo",
     "RejectInferenceStage",
     "RejectInferenceInfo",
+    "RejectInferenceLog",
     # Transformation
     "WoEBinnerStage",
     "WoEBinnerConfig",
@@ -105,10 +113,14 @@ __all__ = [
     "StepwiseSelectionStage",
     "StepwiseFeatureInfo",
     "StepwiseInfo",
+    "EarlyStoppingInfo",
     "FinalFilterStage",
     "FinalFilterConfig",
     "FeatureFilterInfo",
     "FinalFilterInfo",
+    "InteractionDetectorStage",
+    "InteractionCandidate",
+    "InteractionInfo",
     # Modeling
     "ModelTrainerStage",
     "FeatureCoefficient",
