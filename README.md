@@ -41,10 +41,10 @@ Roadmap for core code  (New Components)
 | [x] | `PostProcessor` | NEW | Validation after binning |
 | [x] | `ClusteringStage` | WRAP | Adapter for my `ClusterAnalysis` |
 | [x] | `StepwiseSelectionStage` | WRAP | Adapter for `iterative_logistic_selection` |
-| ⬜ | `FinalFilterStage` | NEW | p-value + VIF filtering |
+| [x] | `FinalFilterStage` | NEW | p-value + VIF filtering |
 |[x] | `ModelTrainer` | NEW | Final LR training with diagnostics |
 | [x] | `StabilityAnalyzer` | WRAP | Wraps my PSI code |
-| ⬜ | `ReportGenerator` | NEW | Dashboard generation |
+| [x] | `ReportGenerator` | NEW | Dashboard generation |
 
 
 
