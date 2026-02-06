@@ -1,5 +1,5 @@
 """
-Base classes for the scorecard modeling pipeline.
+Base classes for the reasoning pipeline.
 
 This module provides abstract base class for all pipeline stages,
 configuration dataclasses and result containers. All stages should
@@ -199,6 +199,25 @@ class SelectionConfig:
 
     Controls how forward/backward selection works.
     Alpha thresholds determine entry and exit criteria.
+
+    Early stopping helps prevent overfitting by monitoring test AUC:
+    - patience: stop if no improvement for N consecutive steps
+    - min_improvement: minimum AUC gain to count as improvement
+    - restore_best: restore model to best test AUC point
+
+    Attributes:
+        method: selection method (forward, backward, both)
+        alpha_enter: p-value threshold to enter model
+        alpha_exit: p-value threshold to exit (for backward steps)
+        max_features: limit number of features (None = no limit)
+        min_features: always keep at least this many
+        use_wald_test: use Wald test for coefficient significance
+        use_lr_test: use likelihood ratio test for feature addition
+        early_stopping_enabled: whether to use early stopping
+        patience: number of steps without improvement before stopping
+        min_improvement: minimum AUC improvement to count as progress
+        restore_best: restore to best test AUC point when stopping
+        monitor_metric: which metric to monitor ("test_auc", "train_auc", "gap")
     """
     method: SelectionMethod = SelectionMethod.FORWARD
     alpha_enter: float = 0.05  # p-value threshold to enter model
@@ -207,6 +226,23 @@ class SelectionConfig:
     min_features: int = 3  # always keep at least this many
     use_wald_test: bool = True
     use_lr_test: bool = True
+    # Early stopping options
+    early_stopping_enabled: bool = True
+    patience: int = 5  # stop after N steps without improvement
+    min_improvement: float = 0.001  # minimum AUC improvement threshold
+    restore_best: bool = True  # restore to best test AUC when stopping early
+    monitor_metric: str = "test_auc"  # "test_auc", "train_auc", or "gap"
+
+    def __post_init__(self):
+        if self.patience < 1:
+            raise ValueError(f"patience must be >= 1, got {self.patience}")
+        if self.min_improvement < 0:
+            raise ValueError(f"min_improvement must be >= 0, got {self.min_improvement}")
+        valid_metrics = {"test_auc", "train_auc", "gap"}
+        if self.monitor_metric not in valid_metrics:
+            raise ValueError(
+                f"monitor_metric must be one of {valid_metrics}, got '{self.monitor_metric}'"
+            )
 
 
 @dataclass
@@ -292,6 +328,111 @@ class BootstrapConfig:
 
 
 @dataclass
+class RejectInferenceConfig:
+    """Configuration for reject inference.
+
+    Reject inference handles the bias introduced by only observing outcomes
+    for approved applicants. This stage infers likely outcomes for rejected
+    applications and augments the training data.
+
+    Attributes:
+        enabled: whether to perform reject inference
+        method: inference method to use:
+            - "hard_cutoff": assign bad if score below threshold
+            - "fuzzy": use predicted probabilities as weights
+            - "parceling": distribute rejects based on score distribution
+            - "augmentation": simple augmentation with fixed bad rate
+        score_column: column containing application scores (for accepted and rejected)
+        decision_column: column indicating accept/reject decision
+        accept_value: value in decision_column indicating acceptance
+        reject_value: value in decision_column indicating rejection
+        hard_cutoff_threshold: score threshold for hard cutoff method
+        parceling_n_bins: number of bins for parceling method
+        augmentation_bad_rate: assumed bad rate for simple augmentation
+        weight_rejects: weight to apply to inferred reject samples (0-1)
+        random_state: seed for reproducibility
+    """
+    enabled: bool = False
+    method: str = "fuzzy"  # "hard_cutoff", "fuzzy", "parceling", "augmentation"
+    score_column: str = "application_score"
+    decision_column: str = "decision"
+    accept_value: Any = 1
+    reject_value: Any = 0
+    hard_cutoff_threshold: float = 0.5
+    parceling_n_bins: int = 10
+    augmentation_bad_rate: float = 0.5
+    weight_rejects: float = 1.0
+    random_state: int = 42
+
+    def __post_init__(self):
+        valid_methods = {"hard_cutoff", "fuzzy", "parceling", "augmentation"}
+        if self.method not in valid_methods:
+            raise ValueError(
+                f"method must be one of {valid_methods}, got '{self.method}'"
+            )
+        if not 0 <= self.weight_rejects <= 1:
+            raise ValueError(
+                f"weight_rejects must be between 0 and 1, got {self.weight_rejects}"
+            )
+        if not 0 <= self.augmentation_bad_rate <= 1:
+            raise ValueError(
+                f"augmentation_bad_rate must be between 0 and 1, got {self.augmentation_bad_rate}"
+            )
+
+
+@dataclass
+class InteractionConfig:
+    """Configuration for feature interaction detection.
+
+    Detects and generates meaningful interaction terms between features.
+    Interactions can improve model performance by capturing non-additive effects
+    (e.g., high income with low debt ratio is more predictive than either alone).
+
+    Attributes:
+        enabled: whether to search for interaction terms
+        interaction_types: types of interactions to consider
+            - "multiplicative": X1 * X2
+            - "ratio": X1 / X2 (with safe division)
+            - "difference": X1 - X2
+        max_interactions: maximum number of interactions to add
+        min_auc_improvement: minimum AUC improvement to keep interaction
+        candidate_features: specific features to consider (None = all)
+        exclude_features: features to exclude from interaction search
+        test_all_pairs: if True, test all pairs; if False, use heuristic
+        correlation_threshold: only try interactions between features with
+                               abs correlation < threshold (avoid redundancy)
+        pvalue_threshold: p-value threshold for interaction significance
+        use_woe_values: if True, create interactions on WoE-transformed values
+        random_state: seed for reproducibility
+    """
+    enabled: bool = False
+    interaction_types: List[str] = field(default_factory=lambda: ["multiplicative"])
+    max_interactions: int = 5
+    min_auc_improvement: float = 0.005
+    candidate_features: Optional[List[str]] = None
+    exclude_features: List[str] = field(default_factory=list)
+    test_all_pairs: bool = False
+    correlation_threshold: float = 0.5
+    pvalue_threshold: float = 0.05
+    use_woe_values: bool = True
+    random_state: int = 42
+
+    def __post_init__(self):
+        valid_types = {"multiplicative", "ratio", "difference"}
+        for it in self.interaction_types:
+            if it not in valid_types:
+                raise ValueError(
+                    f"Invalid interaction type '{it}'. Must be one of {valid_types}"
+                )
+        if self.max_interactions < 1:
+            raise ValueError(f"max_interactions must be >= 1, got {self.max_interactions}")
+        if not 0 <= self.min_auc_improvement <= 1:
+            raise ValueError(
+                f"min_auc_improvement must be between 0 and 1, got {self.min_auc_improvement}"
+            )
+
+
+@dataclass
 class PipelineConfig:
     """Master configuration for entire pipeline.
 
@@ -309,6 +450,8 @@ class PipelineConfig:
     model: ModelConfig = field(default_factory=ModelConfig)
     diagnostics: DiagnosticsConfig = field(default_factory=DiagnosticsConfig)
     bootstrap: BootstrapConfig = field(default_factory=BootstrapConfig)
+    reject_inference: RejectInferenceConfig = field(default_factory=RejectInferenceConfig)
+    interactions: InteractionConfig = field(default_factory=InteractionConfig)
 
     # general settings
     random_state: int = 42
@@ -409,7 +552,7 @@ class StageResult:
 class PipelineStage(ABC):
     """Abstract base class for all pipeline stages.
 
-    Every stage in the scorecard pipeline should inherit from this class
+    Every stage in the reasoning pipeline should inherit from this class
     and implement the required abstract methods. Stages follow sklearn-like
     fit/transform pattern for consistency.
 
