@@ -19,6 +19,7 @@ from core.base import (
     PostprocessingConfig,
     FinalFilterConfig,
     DiagnosticsConfig,
+    BootstrapConfig,
     BinnerOptimization,
     SelectionMethod,
     ImputationStrategy,
@@ -71,6 +72,7 @@ __all__ = [
     "FinalFilterConfig",
     "ModelConfig",
     "DiagnosticsConfig",
+    "BootstrapConfig",
     # Enums
     "BinnerOptimization",
     "SelectionMethod",

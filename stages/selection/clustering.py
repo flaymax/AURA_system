@@ -3,22 +3,25 @@ Clustering stage for feature selection based on correlation analysis.
 
 Wraps the existing ClusterAnalysis class to fit into the pipeline architecture.
 Uses hierarchical clustering to group correlated features and selects
-representative from each cluster.
+representative from each cluster. Optionally filters selected features
+by statistical significance using logistic regression p-values.
 """
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
 import time
+import warnings
 
 import pandas as pd
 import numpy as np
+import statsmodels.api as sm
 
 from core.base import PipelineStage, StageResult, ClusteringConfig
 
 
 class ClusterSelectionMethod(Enum):
-    """Methods for selecting represantative feature from cluster."""
+    """Methods for selecting representative feature from cluster."""
     MAX_TRAIN = "max_train"  # highest Gini on train set
     MAX_TEST = "max_test"  # highest Gini on test set
     MAX_VALID = "max_valid"  # highest Gini on validation set
@@ -37,6 +40,9 @@ class ClusterInfo:
     gini_train: Optional[float] = None
     gini_test: Optional[float] = None
     gini_valid: Optional[float] = None
+    # p-value from univariate logistic regression
+    pvalue: Optional[float] = None
+    passed_pvalue_filter: bool = True
 
 
 @dataclass
@@ -53,6 +59,11 @@ class ClusteringInfo:
     feature_to_cluster: Dict[str, int] = field(default_factory=dict)
     # features that were dropped (not selected from clusters)
     dropped_features: List[str] = field(default_factory=list)
+    # p-value filtering info
+    pvalue_filter_enabled: bool = False
+    pvalue_threshold: float = 0.05
+    n_removed_by_pvalue: int = 0
+    features_removed_by_pvalue: List[str] = field(default_factory=list)
     # timing info
     elapsed_seconds: float = 0.0
 
@@ -82,7 +93,93 @@ class ClusteringStage(PipelineStage):
         self._cluster_analysis = None
         self._clustering_info: Optional[ClusteringInfo] = None
         self._selected_features: List[str] = []
+        self._pvalue_results: Dict[str, float] = {}
         self._is_fitted = False
+
+    def _calculate_pvalue_logit(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        feature: str
+    ) -> float:
+        """
+        Calculate p-value for a feature using statsmodels Logit.
+
+        Fits a univariate logistic regression and returns the p-value
+        for the feature coefficient. This tests whether the feature
+        has a statistically significant relationship with the target.
+
+        Args:
+            X: DataFrame containing the feature
+            y: Binary target variable
+            feature: Name of the feature to test
+
+        Returns:
+            p-value for the feature coefficient (1.0 if fitting fails)
+        """
+        try:
+            feature_values = X[feature].fillna(0).values
+            feature_with_const = sm.add_constant(feature_values)
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                model = sm.Logit(y.values, feature_with_const)
+                result = model.fit(disp=0, method='bfgs', maxiter=100)
+
+            # p-value for the feature coefficient (index 1, after constant)
+            if len(result.pvalues) > 1:
+                return result.pvalues[1]
+            return 1.0
+
+        except Exception:
+            # If model fitting fails, return high p-value (feature is unreliable)
+            return 1.0
+
+    def _filter_by_pvalue(
+        self,
+        data: pd.DataFrame,
+        target: str,
+        features: List[str],
+        threshold: float
+    ) -> Tuple[List[str], Dict[str, float], List[str]]:
+        """
+        Filter features by p-value from univariate logistic regression.
+
+        For each feature, fits sm.Logit and checks if the coefficient
+        is statistically significant (p-value <= threshold).
+
+        Args:
+            data: DataFrame with features and target
+            target: Name of target column
+            features: List of feature names to test
+            threshold: Maximum p-value to keep feature
+
+        Returns:
+            Tuple of (kept_features, pvalue_dict, removed_features)
+        """
+        # Use training data only
+        if 'sample_type' in data.columns:
+            train_data = data[data['sample_type'] == 0]
+        else:
+            train_data = data
+
+        X = train_data[features]
+        y = train_data[target]
+
+        pvalues = {}
+        kept_features = []
+        removed_features = []
+
+        for feat in features:
+            pval = self._calculate_pvalue_logit(X, y, feat)
+            pvalues[feat] = pval
+
+            if pval <= threshold:
+                kept_features.append(feat)
+            else:
+                removed_features.append(feat)
+
+        return kept_features, pvalues, removed_features
 
     def fit(
         self,
@@ -111,7 +208,7 @@ class ClusteringStage(PipelineStage):
 
         # determine which columns to use
         if feature_columns is None:
-            # auto-detect: all numeric excpet target and sample_type
+            # auto-detect: all numeric columns except target and sample_type
             exclude_cols = [target]
             if 'sample_type' in data.columns:
                 exclude_cols.append('sample_type')
@@ -192,6 +289,34 @@ class ClusteringStage(PipelineStage):
                 if feat != selected_feat:
                     dropped_features.append(feat)
 
+        # apply p-value filtering if enabled
+        features_removed_by_pvalue = []
+        n_removed_by_pvalue = 0
+
+        if self.config.pvalue_filter_enabled and len(self._selected_features) > 0:
+            kept_features, pvalues, removed_by_pvalue = self._filter_by_pvalue(
+                data=data,
+                target=target,
+                features=self._selected_features,
+                threshold=self.config.pvalue_threshold
+            )
+
+            self._pvalue_results = pvalues
+            features_removed_by_pvalue = removed_by_pvalue
+            n_removed_by_pvalue = len(removed_by_pvalue)
+
+            # update cluster infos with p-value information
+            for info in cluster_infos:
+                feat = info.selected_feature
+                info.pvalue = pvalues.get(feat)
+                info.passed_pvalue_filter = feat in kept_features
+
+            # update selected features and dropped features lists
+            self._selected_features = kept_features
+            dropped_features.extend(features_removed_by_pvalue)
+
+        elapsed = time.time() - start_time
+
         # store clustering info for later retrieval
         self._clustering_info = ClusteringInfo(
             n_input_features=n_input,
@@ -202,6 +327,10 @@ class ClusteringStage(PipelineStage):
             clusters=cluster_infos,
             feature_to_cluster=feature_to_cluster,
             dropped_features=dropped_features,
+            pvalue_filter_enabled=self.config.pvalue_filter_enabled,
+            pvalue_threshold=self.config.pvalue_threshold,
+            n_removed_by_pvalue=n_removed_by_pvalue,
+            features_removed_by_pvalue=features_removed_by_pvalue,
             elapsed_seconds=elapsed
         )
 
@@ -265,7 +394,10 @@ class ClusteringStage(PipelineStage):
             metadata={
                 'selected_features': self._selected_features.copy(),
                 'n_clusters': self._clustering_info.n_clusters,
-                'dropped_features': self._clustering_info.dropped_features.copy()
+                'dropped_features': self._clustering_info.dropped_features.copy(),
+                'pvalue_filter_enabled': self._clustering_info.pvalue_filter_enabled,
+                'features_removed_by_pvalue': self._clustering_info.features_removed_by_pvalue.copy(),
+                'pvalue_results': self._pvalue_results.copy()
             }
         )
 
@@ -276,18 +408,23 @@ class ClusteringStage(PipelineStage):
 
         info = self._clustering_info
 
-        # cluster details for visualization
+        # cluster details for visualization (including p-value info)
         cluster_details = []
         for cl in info.clusters:
-            cluster_details.append({
+            cluster_detail = {
                 'cluster_id': cl.cluster_id,
                 'selected_feature': cl.selected_feature,
                 'all_features': cl.all_features,
                 'n_features': cl.n_features,
                 'dropped_features': [f for f in cl.all_features if f != cl.selected_feature]
-            })
+            }
+            # add p-value info if available
+            if cl.pvalue is not None:
+                cluster_detail['pvalue'] = round(cl.pvalue, 6)
+                cluster_detail['passed_pvalue_filter'] = cl.passed_pvalue_filter
+            cluster_details.append(cluster_detail)
 
-        return {
+        logs = {
             'stage_name': 'ClusteringStage',
             'summary': {
                 'input_features': info.n_input_features,
@@ -302,6 +439,20 @@ class ClusteringStage(PipelineStage):
             'feature_to_cluster': info.feature_to_cluster
         }
 
+        # add p-value filtering summary if enabled
+        if info.pvalue_filter_enabled:
+            logs['summary']['pvalue_filter_enabled'] = True
+            logs['summary']['pvalue_threshold'] = info.pvalue_threshold
+            logs['summary']['n_removed_by_pvalue'] = info.n_removed_by_pvalue
+            logs['pvalue_filtering'] = {
+                'enabled': True,
+                'threshold': info.pvalue_threshold,
+                'features_removed': info.features_removed_by_pvalue,
+                'n_removed': info.n_removed_by_pvalue
+            }
+
+        return logs
+
     def get_clustering_info(self) -> Optional[ClusteringInfo]:
         """Get detailed clustering information."""
         return self._clustering_info
@@ -315,6 +466,27 @@ class ClusteringStage(PipelineStage):
         if self._clustering_info is None:
             return None
         return self._clustering_info.feature_to_cluster.get(feature)
+
+    def get_pvalue_results(self) -> Dict[str, float]:
+        """
+        Get p-value results from univariate logistic regression tests.
+
+        Returns:
+            Dictionary mapping feature name to p-value.
+            Empty dict if p-value filtering was not enabled.
+        """
+        return self._pvalue_results.copy()
+
+    def get_features_removed_by_pvalue(self) -> List[str]:
+        """
+        Get list of features that were removed due to high p-value.
+
+        Returns:
+            List of feature names removed by p-value filtering.
+        """
+        if self._clustering_info is None:
+            return []
+        return self._clustering_info.features_removed_by_pvalue.copy()
 
     def get_dendrogram(self, output_path: Optional[str] = None):
         """
