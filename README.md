@@ -46,10 +46,8 @@ Roadmap for core code  (New Components)
 | ✅ | `StabilityAnalyzer` | WRAP | Wraps my PSI code |
 | ✅ | `ReportGenerator` | NEW | Dashboard generation |
 
-## Pipeline 
-
+## Pipeline Architecture
 ![AURA Pipeline Architecture](https://raw.githubusercontent.com/flaymax/AURA_system/refs/heads/main/aura-pipeline-svg.svg)
-
 ## License
 
 MIT License
