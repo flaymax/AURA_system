@@ -48,6 +48,7 @@ Roadmap for core code  (New Components)
 
 ## Pipeline 
 
+![AURA Pipeline Architecture](https://raw.githubusercontent.com/flaymax/AURA_system/refs/heads/main/aura-pipeline-svg.svg)
 
 ## License
 
