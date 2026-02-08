@@ -1,0 +1,368 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 1680" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <linearGradient id="prepGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E07A5F"/>
+      <stop offset="100%" stop-color="#C96A52"/>
+    </linearGradient>
+    <linearGradient id="transGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F4A261"/>
+      <stop offset="100%" stop-color="#E08E4A"/>
+    </linearGradient>
+    <linearGradient id="selGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#81B29A"/>
+      <stop offset="100%" stop-color="#6A9C83"/>
+    </linearGradient>
+    <linearGradient id="modGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#58a6ff"/>
+      <stop offset="100%" stop-color="#4090e0"/>
+    </linearGradient>
+    <linearGradient id="evalGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F2545B"/>
+      <stop offset="100%" stop-color="#D9434A"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c9d1d9" opacity="0.4"/>
+    </marker>
+  </defs>
+
+  <!-- Background - GitHub dark default -->
+  <rect width="920" height="1680" rx="16" fill="#0d1117"/>
+
+  <!-- Title -->
+  <text x="460" y="52" text-anchor="middle" font-size="26" font-weight="700" fill="#e6edf3" letter-spacing="-0.5">AURA Pipeline Architecture</text>
+  <text x="460" y="76" text-anchor="middle" font-size="13" fill="#7d8590" letter-spacing="3">AUTOMATED REASONING PIPELINE</text>
+
+  <!-- Legend -->
+  <g transform="translate(100, 96)">
+    <rect x="0" y="0" width="720" height="32" rx="16" fill="#161b22" opacity="0.8"/>
+    <circle cx="60" cy="16" r="7" fill="url(#prepGrad)"/><text x="76" y="20.5" font-size="11" fill="#8b949e">Preprocessing</text>
+    <circle cx="220" cy="16" r="7" fill="url(#transGrad)"/><text x="236" y="20.5" font-size="11" fill="#8b949e">Transformation</text>
+    <circle cx="390" cy="16" r="7" fill="url(#selGrad)"/><text x="406" y="20.5" font-size="11" fill="#8b949e">Selection</text>
+    <circle cx="530" cy="16" r="7" fill="url(#modGrad)"/><text x="546" y="20.5" font-size="11" fill="#8b949e">Modeling</text>
+    <circle cx="660" cy="16" r="7" fill="url(#evalGrad)"/><text x="676" y="20.5" font-size="11" fill="#8b949e">Evaluation</text>
+  </g>
+
+  <!-- ==================== STAGE 0: Reject Inference ==================== -->
+  <g transform="translate(60, 148)" filter="url(#shadow)">
+    <rect width="800" height="120" rx="12" fill="#161b22"/>
+    <rect width="800" height="120" rx="12" fill="url(#prepGrad)" opacity="0.04"/>
+    <rect width="6" height="120" rx="3" fill="url(#prepGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#prepGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">0</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">Reject Inference</text>
+    <rect x="218" y="15" width="64" height="20" rx="10" fill="#F4A261" opacity="0.15"/>
+    <text x="250" y="29" text-anchor="middle" font-size="10" font-weight="600" fill="#F4A261">OPTIONAL</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Handles selection bias from only observing approved applicant outcomes</text>
+    <g transform="translate(28, 68)">
+      <rect width="148" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#E07A5F" font-weight="600">Methods:</text>
+      <text x="58" y="15" font-size="10" fill="#8b949e">fuzzy · hard_cutoff</text>
+    </g>
+    <g transform="translate(190, 68)">
+      <rect width="154" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#E07A5F" font-weight="600">Also:</text>
+      <text x="38" y="15" font-size="10" fill="#8b949e">parceling · augmentation</text>
+    </g>
+    <g transform="translate(358, 68)">
+      <rect width="240" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#E07A5F" font-weight="600">Output:</text>
+      <text x="52" y="15" font-size="10" fill="#8b949e">augmented labels + sample weights</text>
+    </g>
+    <text x="28" y="108" font-size="10.5" fill="#484f58" font-style="italic">Infers outcomes for rejected applicants → produces weighted dataset for unbiased model training</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="270" x2="460" y2="296" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 1: Data Cleaning ==================== -->
+  <g transform="translate(60, 298)" filter="url(#shadow)">
+    <rect width="800" height="110" rx="12" fill="#161b22"/>
+    <rect width="800" height="110" rx="12" fill="url(#prepGrad)" opacity="0.04"/>
+    <rect width="6" height="110" rx="3" fill="url(#prepGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#prepGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">1</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">Data Cleaning</text>
+    <text x="180" y="30" font-size="12" fill="#7d8590">DataCleaner</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Removes low-quality features: high nulls, zero variance, non-numeric columns</text>
+    <g transform="translate(28, 66)">
+      <rect width="186" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#E07A5F" font-weight="600">Null threshold:</text>
+      <text x="92" y="15" font-size="10" fill="#8b949e">max_null_ratio=0.97</text>
+    </g>
+    <g transform="translate(228, 66)">
+      <rect width="230" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#E07A5F" font-weight="600">Variance threshold:</text>
+      <text x="114" y="15" font-size="10" fill="#8b949e">max_same_value_ratio=0.97</text>
+    </g>
+    <text x="28" y="105" font-size="10.5" fill="#484f58" font-style="italic">Logs every dropped feature with reason → triggers DATA_QUALITY_001 if too many dropped</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="410" x2="460" y2="434" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 2: Type Detection ==================== -->
+  <g transform="translate(60, 436)" filter="url(#shadow)">
+    <rect width="800" height="110" rx="12" fill="#161b22"/>
+    <rect width="800" height="110" rx="12" fill="url(#prepGrad)" opacity="0.04"/>
+    <rect width="6" height="110" rx="3" fill="url(#prepGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#prepGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">2</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">Type Detection</text>
+    <text x="192" y="30" font-size="12" fill="#7d8590">TypeDetector</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Classifies each feature by cardinality to guide downstream binning strategy</text>
+    <g transform="translate(28, 66)">
+      <rect width="110" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#8b949e">🔘 BINARY (2)</text>
+    </g>
+    <g transform="translate(150, 66)">
+      <rect width="150" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#8b949e">📊 CATEGORICAL (3–5)</text>
+    </g>
+    <g transform="translate(314, 66)">
+      <rect width="148" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#8b949e">🔢 DISCRETE (6–30)</text>
+    </g>
+    <g transform="translate(476, 66)">
+      <rect width="156" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#8b949e">📈 CONTINUOUS (30+)</text>
+    </g>
+    <g transform="translate(646, 66)">
+      <rect width="126" height="22" rx="6" fill="#E07A5F" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#8b949e">🆔 ID_LIKE (high)</text>
+    </g>
+    <text x="28" y="106" font-size="10.5" fill="#484f58" font-style="italic">ID-like features flagged for review · type metadata passed to binning stage</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="548" x2="460" y2="572" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 3: WoE Binning ==================== -->
+  <g transform="translate(60, 574)" filter="url(#shadow)">
+    <rect width="800" height="140" rx="12" fill="#161b22"/>
+    <rect width="800" height="140" rx="12" fill="url(#transGrad)" opacity="0.04"/>
+    <rect width="6" height="140" rx="3" fill="url(#transGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#transGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">3</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">WoE Binning</text>
+    <text x="174" y="30" font-size="12" fill="#7d8590">WoEBinnerStage</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Decision-tree optimal splits → WoE encoding → IV filtering, monotonicity &amp; PSI checks</text>
+    <g transform="translate(28, 66)">
+      <rect width="144" height="22" rx="6" fill="#F4A261" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#F4A261" font-weight="600">IV filter:</text>
+      <text x="54" y="15" font-size="10" fill="#8b949e">min_iv = 0.02</text>
+    </g>
+    <g transform="translate(186, 66)">
+      <rect width="270" height="22" rx="6" fill="#F4A261" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#F4A261" font-weight="600">Monotonicity:</text>
+      <text x="82" y="15" font-size="10" fill="#8b949e">enforce · warn · ignore  (severity graded)</text>
+    </g>
+    <g transform="translate(470, 66)">
+      <rect width="302" height="22" rx="6" fill="#F4A261" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#F4A261" font-weight="600">PSI check:</text>
+      <text x="64" y="15" font-size="10" fill="#8b949e">train vs test distribution shift (threshold=0.25)</text>
+    </g>
+    <g transform="translate(28, 96)">
+      <rect width="200" height="22" rx="6" fill="#F4A261" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#F4A261" font-weight="600">Split method:</text>
+      <text x="80" y="15" font-size="10" fill="#8b949e">Decision Tree (not percentile)</text>
+    </g>
+    <g transform="translate(242, 96)">
+      <rect width="200" height="22" rx="6" fill="#F4A261" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#F4A261" font-weight="600">Missing values:</text>
+      <text x="96" y="15" font-size="10" fill="#8b949e">separate bin with own WoE</text>
+    </g>
+    <text x="28" y="136" font-size="10.5" fill="#484f58" font-style="italic">Logs bin boundaries, WoE values, event rates, IV, monotonicity direction &amp; PSI level per feature</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="716" x2="460" y2="740" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 4: Clustering ==================== -->
+  <g transform="translate(60, 742)" filter="url(#shadow)">
+    <rect width="800" height="120" rx="12" fill="#161b22"/>
+    <rect width="800" height="120" rx="12" fill="url(#selGrad)" opacity="0.04"/>
+    <rect width="6" height="120" rx="3" fill="url(#selGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#selGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">4</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">Feature Clustering</text>
+    <text x="216" y="30" font-size="12" fill="#7d8590">ClusteringStage</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Hierarchical clustering (1−|corr|) → picks best representative per cluster → p-value filter</text>
+    <g transform="translate(28, 66)">
+      <rect width="220" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">Distance:</text>
+      <text x="58" y="15" font-size="10" fill="#8b949e">1 − |correlation|  (threshold=0.7)</text>
+    </g>
+    <g transform="translate(262, 66)">
+      <rect width="350" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">Selection:</text>
+      <text x="62" y="15" font-size="10" fill="#8b949e">max_train · max_test · closest_train_test · center_cluster</text>
+    </g>
+    <g transform="translate(28, 94)">
+      <rect width="380" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">P-value filter:</text>
+      <text x="80" y="15" font-size="10" fill="#8b949e">univariate sm.Logit per representative (p &lt; 0.05 to keep)</text>
+    </g>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="864" x2="460" y2="888" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 5: Stepwise Selection ==================== -->
+  <g transform="translate(60, 890)" filter="url(#shadow)">
+    <rect width="800" height="120" rx="12" fill="#161b22"/>
+    <rect width="800" height="120" rx="12" fill="url(#selGrad)" opacity="0.04"/>
+    <rect width="6" height="120" rx="3" fill="url(#selGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#selGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">5</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">Stepwise Selection</text>
+    <text x="224" y="30" font-size="12" fill="#7d8590">StepwiseSelectionStage</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Forward-backward stepwise: LR test for entry, Wald test for removal, AUC tracking per step</text>
+    <g transform="translate(28, 66)">
+      <rect width="190" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">Entry:</text>
+      <text x="44" y="15" font-size="10" fill="#8b949e">Likelihood Ratio Test (α=0.05)</text>
+    </g>
+    <g transform="translate(232, 66)">
+      <rect width="176" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">Removal:</text>
+      <text x="58" y="15" font-size="10" fill="#8b949e">Wald Test (significance)</text>
+    </g>
+    <g transform="translate(422, 66)">
+      <rect width="350" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">Early stopping:</text>
+      <text x="86" y="15" font-size="10" fill="#8b949e">patience=5 steps · monitors test AUC · restores best state</text>
+    </g>
+    <text x="28" y="108" font-size="10.5" fill="#484f58" font-style="italic">Prevents overfitting by halting when test AUC plateaus → FEATURE_SELECTION_001 trigger if empty</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="1012" x2="460" y2="1036" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 5b: Interactions ==================== -->
+  <g transform="translate(60, 1038)" filter="url(#shadow)">
+    <rect width="800" height="110" rx="12" fill="#161b22"/>
+    <rect width="800" height="110" rx="12" fill="url(#selGrad)" opacity="0.04"/>
+    <rect width="6" height="110" rx="3" fill="url(#selGrad)"/>
+    <rect x="20" y="14" width="32" height="22" rx="6" fill="url(#selGrad)"/>
+    <text x="36" y="29.5" text-anchor="middle" font-size="10" font-weight="700" fill="white">5b</text>
+    <text x="62" y="30" font-size="16" font-weight="700" fill="#e6edf3">Interaction Detection</text>
+    <rect x="238" y="15" width="64" height="20" rx="10" fill="#F4A261" opacity="0.15"/>
+    <text x="270" y="29" text-anchor="middle" font-size="10" font-weight="600" fill="#F4A261">OPTIONAL</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Discovers meaningful feature interactions (X₁·X₂, X₁/X₂, X₁−X₂) that improve predictive power</text>
+    <g transform="translate(28, 66)">
+      <rect width="280" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">Types:</text>
+      <text x="44" y="15" font-size="10" fill="#8b949e">multiplicative · ratio · difference (on WoE values)</text>
+    </g>
+    <g transform="translate(322, 66)">
+      <rect width="280" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">Selection:</text>
+      <text x="62" y="15" font-size="10" fill="#8b949e">min AUC improvement + p-value + correlation filter</text>
+    </g>
+    <text x="28" y="105" font-size="10.5" fill="#484f58" font-style="italic">max_interactions=5 · tests all candidate pairs → keeps those meeting AUC &amp; significance thresholds</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="1150" x2="460" y2="1174" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 6: Final Filter ==================== -->
+  <g transform="translate(60, 1176)" filter="url(#shadow)">
+    <rect width="800" height="100" rx="12" fill="#161b22"/>
+    <rect width="800" height="100" rx="12" fill="url(#selGrad)" opacity="0.04"/>
+    <rect width="6" height="100" rx="3" fill="url(#selGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#selGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">6</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">Final Filter</text>
+    <text x="163" y="30" font-size="12" fill="#7d8590">FinalFilterStage</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Last statistical gate: ensures all surviving features are significant and independent</text>
+    <g transform="translate(28, 66)">
+      <rect width="186" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">P-value:</text>
+      <text x="56" y="15" font-size="10" fill="#8b949e">drop if p > max_pvalue (0.05)</text>
+    </g>
+    <g transform="translate(228, 66)">
+      <rect width="220" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">VIF:</text>
+      <text x="30" y="15" font-size="10" fill="#8b949e">iterative removal if VIF > max_vif</text>
+    </g>
+    <g transform="translate(462, 66)">
+      <rect width="200" height="22" rx="6" fill="#81B29A" opacity="0.10"/>
+      <text x="8" y="15" font-size="10" fill="#81B29A" font-weight="600">Sign check:</text>
+      <text x="72" y="15" font-size="10" fill="#8b949e">optional coefficient validation</text>
+    </g>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="1278" x2="460" y2="1302" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 7: Model Training ==================== -->
+  <g transform="translate(60, 1304)" filter="url(#shadow)">
+    <rect width="800" height="140" rx="12" fill="#161b22"/>
+    <rect width="800" height="140" rx="12" fill="url(#modGrad)" opacity="0.04"/>
+    <rect width="6" height="140" rx="3" fill="url(#modGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#modGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">7</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">Model Training</text>
+    <text x="194" y="30" font-size="12" fill="#7d8590">ModelTrainerStage</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Unregularized logistic regression → scorecard conversion → SQL generation → bootstrap CIs</text>
+    <g transform="translate(28, 66)">
+      <rect width="320" height="22" rx="6" fill="#58a6ff" opacity="0.08"/>
+      <text x="8" y="15" font-size="10" fill="#58a6ff" font-weight="600">Scorecard:</text>
+      <text x="68" y="15" font-size="10" fill="#8b949e">Score = BaseScore + Σ(Coeff × WoE × PDO/ln2)</text>
+    </g>
+    <g transform="translate(362, 66)">
+      <rect width="270" height="22" rx="6" fill="#58a6ff" opacity="0.08"/>
+      <text x="8" y="15" font-size="10" fill="#58a6ff" font-weight="600">Defaults:</text>
+      <text x="58" y="15" font-size="10" fill="#8b949e">base_score=600 · pdo=20 · base_odds=50</text>
+    </g>
+    <g transform="translate(28, 96)">
+      <rect width="244" height="22" rx="6" fill="#58a6ff" opacity="0.08"/>
+      <text x="8" y="15" font-size="10" fill="#58a6ff" font-weight="600">Metrics:</text>
+      <text x="54" y="15" font-size="10" fill="#8b949e">AUC · Gini · KS on train/test/valid</text>
+    </g>
+    <g transform="translate(286, 96)">
+      <rect width="300" height="22" rx="6" fill="#58a6ff" opacity="0.08"/>
+      <text x="8" y="15" font-size="10" fill="#58a6ff" font-weight="600">Bootstrap CI:</text>
+      <text x="80" y="15" font-size="10" fill="#8b949e">1000 iterations · stratified · 95% percentile CI</text>
+    </g>
+    <text x="28" y="136" font-size="10.5" fill="#484f58" font-style="italic">Outputs deployment-ready SQL · triggers MODEL_TRAINING_001 on fit failure</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="460" y1="1446" x2="460" y2="1470" stroke="#c9d1d9" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.2" marker-end="url(#arrow)"/>
+
+  <!-- ==================== STAGE 8: Evaluation ==================== -->
+  <g transform="translate(60, 1472)" filter="url(#shadow)">
+    <rect width="800" height="130" rx="12" fill="#161b22"/>
+    <rect width="800" height="130" rx="12" fill="url(#evalGrad)" opacity="0.04"/>
+    <rect width="6" height="130" rx="3" fill="url(#evalGrad)"/>
+    <rect x="20" y="14" width="26" height="22" rx="6" fill="url(#evalGrad)"/>
+    <text x="33" y="29.5" text-anchor="middle" font-size="11" font-weight="700" fill="white">8</text>
+    <text x="56" y="30" font-size="16" font-weight="700" fill="#e6edf3">Post-Deployment Evaluation</text>
+    <text x="284" y="30" font-size="12" fill="#7d8590">models/</text>
+    <text x="28" y="54" font-size="12" fill="#8b949e">Ongoing monitoring: stability tracking, segment analysis, and champion/challenger comparison</text>
+    <!-- Three sub-modules -->
+    <g transform="translate(28, 68)">
+      <rect width="240" height="44" rx="8" fill="#F2545B" opacity="0.07" stroke="#F2545B" stroke-opacity="0.2" stroke-width="1"/>
+      <text x="12" y="18" font-size="11" font-weight="600" fill="#F2545B">StabilityAnalyzer</text>
+      <text x="12" y="35" font-size="10" fill="#7d8590">Gini/AUC by period · PSI drift</text>
+    </g>
+    <g transform="translate(284, 68)">
+      <rect width="240" height="44" rx="8" fill="#F2545B" opacity="0.07" stroke="#F2545B" stroke-opacity="0.2" stroke-width="1"/>
+      <text x="12" y="18" font-size="11" font-weight="600" fill="#F2545B">SegmentAnalyzer</text>
+      <text x="12" y="35" font-size="10" fill="#7d8590">Subpopulation performance</text>
+    </g>
+    <g transform="translate(540, 68)">
+      <rect width="240" height="44" rx="8" fill="#F2545B" opacity="0.07" stroke="#F2545B" stroke-opacity="0.2" stroke-width="1"/>
+      <text x="12" y="18" font-size="11" font-weight="600" fill="#F2545B">ModelComparator</text>
+      <text x="12" y="35" font-size="10" fill="#7d8590">Bootstrap significance · swap sets</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <text x="460" y="1640" text-anchor="middle" font-size="11" fill="#484f58">All stages produce JSON-serializable logs for web frontend visualization</text>
+  <text x="460" y="1660" text-anchor="middle" font-size="11" fill="#484f58">Plotly (interactive) + Matplotlib (static) · Warm color scheme · SaaS trigger mechanism</text>
+</svg>
