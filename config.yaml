@@ -8,11 +8,12 @@ general:
 data:
   sample_type_column: "sample_type"
   train_ratio: 0.8
+  alt_train_ratio: 0.75
 
 cleaning:
   enabled: true
-  max_null_ratio: 0.97
-  max_same_value_ratio: 0.97
+  max_null_ratio: 0.95
+  max_same_value_ratio: 0.95
   exclude_columns: []
 
 type_detection:
@@ -90,7 +91,6 @@ bootstrap:
   metrics:
     - "auc"
     - "gini"
-    - "ks"
   stratified: true
 
 reject_inference:
