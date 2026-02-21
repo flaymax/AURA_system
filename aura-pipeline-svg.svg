@@ -32,8 +32,8 @@
   <rect width="920" height="1680" rx="16" fill="#0d1117"/>
 
   <!-- Legend -->
-  <g transform="translate(100, 96)">
-    <rect x="0" y="0" width="720" height="32" rx="16" fill="#161b22" opacity="0.8"/>
+  <g transform="translate(100, 60)">
+    <rect x="0" y="0" width="750" height="32" rx="16" fill="#161b22" opacity="0.8"/>
     <circle cx="60" cy="16" r="7" fill="url(#prepGrad)"/><text x="76" y="20.5" font-size="11" fill="#8b949e">Preprocessing</text>
     <circle cx="220" cy="16" r="7" fill="url(#transGrad)"/><text x="236" y="20.5" font-size="11" fill="#8b949e">Transformation</text>
     <circle cx="390" cy="16" r="7" fill="url(#selGrad)"/><text x="406" y="20.5" font-size="11" fill="#8b949e">Selection</text>
