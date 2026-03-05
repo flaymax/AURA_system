@@ -37,6 +37,6 @@ print(analyzer.get_alerts())
 
 # check segments
 seg = SegmentAnalyzer(config)
-seg.evaluate(data, predictions, segment_column='region')
+seg.evaluate(data, predictions)
 print(seg.get_underperforming_segments())
 ```
