@@ -43,7 +43,7 @@ Roadmap for core code  (New Components)
 | ✅ | `StepwiseSelectionStage` | WRAP | Adapter for `iterative_logistic_selection` |
 | ✅ | `FinalFilterStage` | NEW | p-value + VIF filtering |
 | ✅ | `ModelTrainer` | NEW | Final LR training with diagnostics |
-| ✅ | `StabilityAnalyzer` | WRAP | Wraps my PSI code |
+| ✅ | `StabilityAnalyzer` | WRAP | PSI code |
 | ✅ | `ReportGenerator` | NEW | Dashboard generation |
 
 ## Pipeline Architecture
