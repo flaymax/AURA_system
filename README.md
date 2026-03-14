@@ -20,7 +20,7 @@ An automated AutoML system that turns raw features into stable, interpretable, a
 
 
 ## Core Code
-Pipeline stages include:
+Pipeline stages include
 
 - Automated feature preprocessing with data quality checks and transformations
 - WoE-based feature engineering with built-in monotonicity and stability validation
