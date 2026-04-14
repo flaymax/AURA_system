@@ -44,7 +44,7 @@ Roadmap for core code  (New Components)
 | ✅ | `FinalFilterStage` | NEW | p-value + VIF filtering |
 | ✅ | `ModelTrainer` | NEW | Final LR training with diagnostics |
 | ✅ | `StabilityAnalyzer` | WRAP | PSI code |
-| ✅ | `ReportGenerator` | NEW | Dashboard generation |
+| ✅ | `ReportGenerator` | NEW | Dashboard  |
 
 ## Pipeline Architecture
 ![AURA Pipeline Architecture](https://raw.githubusercontent.com/flaymax/AURA_system/refs/heads/main/aura-pipeline-svg.svg)
