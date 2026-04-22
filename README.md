@@ -16,7 +16,7 @@
 [![Windows](https://img.shields.io/badge/Windows-passing-brightgreen)](https://github.com/flaymax/AURA_system/tree/main/)
 </div>
 
-An automated AutoML system that turns raw features into stable, interpretable, and production-ready models using WoE-based feature engineering, statistical selection, and fully monitored pipelines.
+An automated AutoML system that turns raw features into stable, interpretable, and production-ready models using WoE-based feature engineering, statistical selection, and fully monitored pipelines. 
 
 
 ## Core Code
